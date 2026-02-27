@@ -169,7 +169,7 @@ const Otp = () => {
           <form onSubmit={handleVerify} className="space-y-8">
             {loginMethod === 'otp' ? (
               <div className="space-y-4">
-                <div className="flex justify-center gap-3 dir-ltr">
+                <div className="flex justify-center gap-3" dir="ltr">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
