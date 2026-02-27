@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, Settings, Package } from 'lucide-react';
+import logo from '../../assets/images/logo.svg';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -13,9 +14,12 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-white/50 backdrop-blur-md border-l border-zafting-accent/10 h-screen fixed right-0 top-0 overflow-y-auto">
+    <aside className="w-64 bg-white/50 backdrop-blur-md border-l border-zafting-accent/10 h-screen fixed right-0 top-0 overflow-y-auto z-50">
       <div className="p-6 flex items-center justify-center border-b border-zafting-accent/10">
-        <h1 className="text-2xl font-serif text-zafting-accent font-bold">Divine Admin</h1>
+        <div className="flex flex-col items-center gap-2">
+          <img src={logo} alt="Divine Logo" className="w-12 h-12" />
+          <h1 className="text-xl font-serif text-zafting-accent font-bold">Divine Admin</h1>
+        </div>
       </div>
       <nav className="mt-6 px-4">
         <ul className="space-y-2">

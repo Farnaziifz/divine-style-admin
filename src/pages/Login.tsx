@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toEnglishDigits } from '../utils/digits';
-import { LayoutDashboard } from 'lucide-react';
 import loginBg from '../assets/images/login.jpg';
+import logo from '../assets/images/logo.svg';
 
 const Login = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -43,8 +43,8 @@ const Login = () => {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-[#2A2A2A] rounded-2xl flex items-center justify-center text-white">
-                 <LayoutDashboard size={32} />
+              <div className="w-40 h-40 rounded-2xl flex items-center justify-center text-white">
+                 <img src={logo} alt="Divine Logo" className="w-full h-full" />
               </div>
             </div>
             <h1 className="text-3xl font-extrabold text-[#2A2A2A]">دیواین</h1>
