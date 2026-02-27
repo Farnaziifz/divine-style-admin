@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Otp from './pages/Otp';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -17,6 +18,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/otp" element={<Otp />} />
         
         <Route
           path="/"
