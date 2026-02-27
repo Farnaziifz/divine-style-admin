@@ -1,23 +1,44 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'IRANSans';
+  src: url('./assets/fonts/IRANSansDN_FaNum_Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IRANSans';
+  src: url('./assets/fonts/IRANSansDN_Fa_Num.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'IRANSans';
+  src: url('./assets/fonts/IRANSansDN_FaNum-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 @theme {
   --color-zafting-bg: #E8E0D9;
   --color-zafting-text: #2A2A2A;
   --color-zafting-accent: #6B5B54;
   
   --font-serif: "Playfair Display", "Noto Naskh Arabic", serif;
-  --font-sans: "Inter", "Vazirmatn", sans-serif;
-  --font-persian: "IRANSans", "Vazirmatn", sans-serif;
+  --font-sans: "Inter", "IRANSans", sans-serif;
+  --font-persian: "IRANSans", sans-serif;
 }
 
 body {
   background-color: var(--color-zafting-bg);
   color: var(--color-zafting-text);
-  font-family: var(--font-sans);
+  font-family: "IRANSans", sans-serif;
 }
 
 body[dir="rtl"] {
-  font-family: "IRANSans", "Vazirmatn", sans-serif;
+  font-family: "IRANSans", sans-serif;
 }
 
 /* Custom utility for the outline text effect seen in the image */
