@@ -23,7 +23,15 @@ const Sidebar = () => {
 
   const menuItems = [
     { name: 'داشبورد', icon: LayoutDashboard, path: '/' },
-    { name: 'محصولات', icon: Package, path: '/products' },
+    {
+      name: 'محصولات',
+      icon: Package,
+      path: '/products',
+      children: [
+        { name: 'لیست محصولات', path: '/products' },
+        { name: 'کالکشن‌ها', path: '/products/collections' },
+      ],
+    },
     { name: 'سفارشات', icon: ShoppingBag, path: '/orders' },
     { name: 'کاربران', icon: Users, path: '/users' },
     {

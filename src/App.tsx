@@ -8,6 +8,7 @@ import ProfileSettings from './pages/settings/ProfileSettings';
 import SecuritySettings from './pages/settings/SecuritySettings';
 import Users from './pages/Users';
 import UserDetail from './pages/UserDetail';
+import Collections from './pages/Collections';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!localStorage.getItem('accessToken');
@@ -33,7 +34,10 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="products" element={<div>مدیریت محصولات</div>} />
+          <Route path="products">
+            <Route index element={<div>مدیریت محصولات</div>} />
+            <Route path="collections" element={<Collections />} />
+          </Route>
           <Route path="orders" element={<div>مدیریت سفارشات</div>} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />

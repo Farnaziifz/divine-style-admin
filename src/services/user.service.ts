@@ -52,4 +52,9 @@ export const userService = {
     const response = await api.get('/user/list', { params });
     return response.data;
   },
+
+  getUserById: async (id: string): Promise<UserProfile> => {
+    const response = await api.get(`/user/${id}`);
+    return response.data;
+  },
 };
