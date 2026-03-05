@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toEnglishDigits } from '../utils/digits';
+import { authService } from '../services/auth.service';
 import loginBg from '../assets/images/login.jpg';
 import logo from '../assets/images/logo.svg';
 
@@ -11,22 +12,36 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (localStorage.getItem('accessToken')) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   const handleSendOtp = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // TODO: Call API to send OTP
-    // Simulation:
-    setTimeout(() => {
-      if (phoneNumber.length < 10) {
+    try {
+      if (phoneNumber.length < 11) {
         setError('شماره موبایل نامعتبر است');
         setIsLoading(false);
         return;
       }
-      setIsLoading(false);
+
+      await authService.sendOtp(phoneNumber);
       navigate('/otp', { state: { phoneNumber } });
-    }, 1000);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response: { data: { message: string } } };
+        setError(error.response?.data?.message || 'خطایی در ارسال کد رخ داد');
+      } else {
+        setError('خطایی در ارسال کد رخ داد');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {

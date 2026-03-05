@@ -4,9 +4,12 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Otp from './pages/Otp';
+import ProfileSettings from './pages/settings/ProfileSettings';
+import SecuritySettings from './pages/settings/SecuritySettings';
+import Users from './pages/Users';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const isAuthenticated = !!localStorage.getItem('accessToken');
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -31,8 +34,12 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="products" element={<div>مدیریت محصولات</div>} />
           <Route path="orders" element={<div>مدیریت سفارشات</div>} />
-          <Route path="users" element={<div>مدیریت کاربران</div>} />
-          <Route path="settings" element={<div>تنظیمات</div>} />
+          <Route path="users" element={<Users />} />
+          <Route path="settings">
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="profile" element={<ProfileSettings />} />
+            <Route path="security" element={<SecuritySettings />} />
+          </Route>
         </Route>
       </Routes>
     </Router>

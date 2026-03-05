@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toEnglishDigits } from '../utils/digits';
 import { ArrowRight, Smartphone, KeyRound, Edit2 } from 'lucide-react';
+import { authService } from '../services/auth.service';
 import loginBg from '../assets/images/login.jpg';
 import logo from '../assets/images/logo.svg';
 
@@ -16,7 +17,7 @@ const Otp = () => {
   const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(59);
+  const [countdown, setCountdown] = useState(120);
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -43,25 +44,39 @@ const Otp = () => {
 
     const otpValue = otp.join('');
     
-    // Simulation:
-    setTimeout(() => {
+    try {
+      let response;
       if (loginMethod === 'otp') {
-        if (otpValue === '12345') { // Mock OTP
-          localStorage.setItem('isAuthenticated', 'true');
-          navigate('/');
-        } else {
-          setError('کد وارد شده اشتباه است');
+        if (otpValue.length !== 5) {
+          setError('کد وارد شده کامل نیست');
+          setIsLoading(false);
+          return;
         }
+        response = await authService.verifyOtp(phoneNumber, otpValue);
       } else {
-        if (password === 'password') { // Mock Password
-          localStorage.setItem('isAuthenticated', 'true');
-          navigate('/');
-        } else {
-          setError('رمز عبور اشتباه است');
+        if (!password) {
+          setError('لطفا رمز عبور را وارد کنید');
+          setIsLoading(false);
+          return;
         }
+        response = await authService.login(phoneNumber, password);
       }
+
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('refreshToken', response.refreshToken);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      navigate('/');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response: { data: { message: string } } };
+        setError(error.response?.data?.message || 'خطایی در ورود رخ داد');
+      } else {
+        setError('خطایی در ورود رخ داد');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -84,11 +99,20 @@ const Otp = () => {
     }
   };
 
-  const handleResendOtp = () => {
-    setCountdown(59);
-    setOtp(['', '', '', '', '']);
-    setError('');
-    // TODO: Call API to resend OTP
+  const handleResendOtp = async () => {
+    try {
+      await authService.sendOtp(phoneNumber);
+      setCountdown(120);
+      setOtp(['', '', '', '', '']);
+      setError('');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const error = err as { response: { data: { message: string } } };
+        setError(error.response?.data?.message || 'خطایی در ارسال مجدد کد رخ داد');
+      } else {
+        setError('خطایی در ارسال مجدد کد رخ داد');
+      }
+    }
   };
 
   const formatTime = (seconds: number) => {
