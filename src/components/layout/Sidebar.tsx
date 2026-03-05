@@ -31,6 +31,7 @@ const Sidebar = () => {
         { name: 'لیست محصولات', path: '/products' },
         { name: 'کالکشن‌ها', path: '/products/collections' },
         { name: 'دسته‌بندی‌ها', path: '/products/categories' },
+        { name: 'مشخصات', path: '/products/specifications' },
       ],
     },
     { name: 'سفارشات', icon: ShoppingBag, path: '/orders' },
