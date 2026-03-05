@@ -30,6 +30,7 @@ const Sidebar = () => {
       children: [
         { name: 'لیست محصولات', path: '/products' },
         { name: 'کالکشن‌ها', path: '/products/collections' },
+        { name: 'دسته‌بندی‌ها', path: '/products/categories' },
       ],
     },
     { name: 'سفارشات', icon: ShoppingBag, path: '/orders' },

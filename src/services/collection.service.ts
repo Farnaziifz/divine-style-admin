@@ -11,9 +11,22 @@ export interface Collection {
   createdAt: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    limit: number;
+  };
+}
+
 export const collectionService = {
-  getAll: async (): Promise<Collection[]> => {
-    const response = await api.get('/collections');
+  getAll: async (
+    page = 1,
+    limit = 10,
+  ): Promise<PaginatedResponse<Collection>> => {
+    const response = await api.get('/collections', { params: { page, limit } });
     return response.data;
   },
 
@@ -27,7 +40,10 @@ export const collectionService = {
     return response.data;
   },
 
-  update: async (id: string, data: Partial<Collection>): Promise<Collection> => {
+  update: async (
+    id: string,
+    data: Partial<Collection>,
+  ): Promise<Collection> => {
     const response = await api.patch(`/collections/${id}`, data);
     return response.data;
   },

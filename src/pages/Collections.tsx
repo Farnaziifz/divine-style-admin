@@ -15,6 +15,10 @@ const Collections = () => {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -25,12 +29,14 @@ const Collections = () => {
 
   useEffect(() => {
     fetchCollections();
-  }, []);
+  }, [page]);
 
   const fetchCollections = async () => {
+    setIsLoading(true);
     try {
-      const data = await collectionService.getAll();
-      setCollections(data);
+      const response = await collectionService.getAll(page);
+      setCollections(response.data);
+      setTotal(response.meta.total);
     } catch (error) {
       console.error(error);
     } finally {
@@ -185,6 +191,12 @@ const Collections = () => {
         data={collections}
         isLoading={isLoading}
         emptyMessage="هیچ کالکشنی یافت نشد"
+        pagination={{
+          page,
+          limit: 10,
+          total,
+          onPageChange: setPage,
+        }}
       />
 
       <Modal

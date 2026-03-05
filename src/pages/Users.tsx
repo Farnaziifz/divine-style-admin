@@ -25,7 +25,7 @@ const Users = () => {
     try {
       const response = await userService.getUsers(pageNumber, limit, currentFilters);
       setUsers(response.data);
-      setTotal(response.total);
+      setTotal(response.meta.total);
     } catch (error) {
       console.error('Failed to fetch users', error);
     } finally {
