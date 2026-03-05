@@ -4,6 +4,7 @@ import { Modal } from '../components/common/Modal';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { collectionService, type Collection } from '../services/collection.service';
 import { uploadService } from '../services/upload.service';
+import { getImageUrl } from '../utils/image';
 import { Plus, Edit2, Trash2, Image as ImageIcon, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 const Collections = () => {
@@ -132,7 +133,7 @@ const Collections = () => {
       render: (item) => (
         <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
             {item.image ? (
-                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                <img src={getImageUrl(item.image)} alt={item.title} className="w-full h-full object-cover" />
             ) : (
                 <ImageIcon className="text-gray-400" size={24} />
             )}
@@ -216,7 +217,7 @@ const Collections = () => {
                         className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                     {imagePreview ? (
-                        <img src={imagePreview} alt="Preview" className="h-32 object-cover rounded-lg" />
+                        <img src={getImageUrl(imagePreview)} alt="Preview" className="h-32 object-cover rounded-lg" />
                     ) : (
                         <>
                             <div className="p-3 bg-gray-50 rounded-full text-gray-400">

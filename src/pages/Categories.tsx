@@ -7,6 +7,7 @@ import {
   type Category,
 } from '../services/category.service';
 import { Select } from '../components/common/Select';
+import { getImageUrl } from '../utils/image';
 import {
   Plus,
   Edit2,
@@ -141,7 +142,7 @@ const Categories = () => {
       render: (category) =>
         category.image ? (
           <img
-            src={category.image}
+            src={getImageUrl(category.image)}
             alt={category.title}
             className="w-10 h-10 rounded-md object-cover"
           />
@@ -255,7 +256,7 @@ const Categories = () => {
             <Select
               label="دسته‌بندی والد"
               value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
+              onChange={(e) => setParentId(String(e.target.value))}
               options={[
                 { label: 'بدون والد', value: '' },
                 ...categories
@@ -282,7 +283,7 @@ const Categories = () => {
               {imagePreview ? (
                 <div className="relative inline-block">
                   <img
-                    src={imagePreview}
+                    src={getImageUrl(imagePreview)}
                     alt="Preview"
                     className="h-32 rounded-lg object-cover"
                   />
