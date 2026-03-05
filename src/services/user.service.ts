@@ -21,6 +21,14 @@ export interface UpdateUserDto {
   nationalCode?: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export const userService = {
   getProfile: async (): Promise<UserProfile> => {
     const response = await api.get('/user/profile');
@@ -32,8 +40,16 @@ export const userService = {
     return response.data;
   },
 
-  getUsers: async (): Promise<UserProfile[]> => {
-    const response = await api.get('/user/list');
+  getUsers: async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: { name?: string; mobile?: string }
+  ): Promise<PaginatedResponse<UserProfile>> => {
+    const params: Record<string, string | number> = { page, limit };
+    if (filters?.name) params.name = filters.name;
+    if (filters?.mobile) params.mobile = filters.mobile;
+    
+    const response = await api.get('/user/list', { params });
     return response.data;
   },
 };

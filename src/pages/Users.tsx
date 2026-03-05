@@ -1,26 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Table, type Column } from '../components/common/Table';
+import { UserFilters } from '../components/users/UserFilters';
 import { userService, type UserProfile } from '../services/user.service';
-import { CheckCircle, XCircle, ShoppingBag, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, ShoppingBag, AlertCircle, Eye } from 'lucide-react';
 
 const Users = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState<{ name?: string; mobile?: string }>({});
+  const limit = 10;
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(page, filters);
+  }, [page, filters]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (
+    pageNumber: number,
+    currentFilters: { name?: string; mobile?: string }
+  ) => {
+    setIsLoading(true);
     try {
-      const data = await userService.getUsers();
-      setUsers(data);
+      const response = await userService.getUsers(pageNumber, limit, currentFilters);
+      setUsers(response.data);
+      setTotal(response.total);
     } catch (error) {
       console.error('Failed to fetch users', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleFilterChange = useCallback(
+    (newFilters: { name?: string; mobile?: string }) => {
+      setFilters(newFilters);
+      setPage(1);
+    },
+    []
+  );
 
   const columns: Column<UserProfile>[] = [
     {
@@ -94,22 +113,47 @@ const Users = () => {
         </div>
       ),
     },
+    {
+      key: 'actions',
+      title: 'عملیات',
+      render: (user) => (
+        <div className="flex justify-center">
+            <Link
+                to={`/users/${user.id}`}
+                className="p-2 text-gray-500 hover:text-[#6B5B54] hover:bg-[#6B5B54]/10 rounded-lg transition-colors"
+                title="مشاهده جزئیات"
+            >
+                <Eye size={18} />
+            </Link>
+        </div>
+      ),
+      className: 'text-center',
+      headerClassName: 'text-center',
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#2A2A2A]">مدیریت کاربران</h1>
-        <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">
-            تعداد کل: <span className="font-bold text-[#2A2A2A]">{users.length}</span>
+        <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm whitespace-nowrap">
+          تعداد کل: <span className="font-bold text-[#2A2A2A]">{total}</span>
         </div>
       </div>
+
+      <UserFilters onFilterChange={handleFilterChange} />
 
       <Table
         columns={columns}
         data={users}
         isLoading={isLoading}
         emptyMessage="کاربری یافت نشد"
+        pagination={{
+          page,
+          limit,
+          total,
+          onPageChange: (newPage) => setPage(newPage),
+        }}
       />
     </div>
   );
