@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Table, type Column } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 import { collectionService, type Collection } from '../services/collection.service';
 import { uploadService } from '../services/upload.service';
 import { Plus, Edit2, Trash2, Image as ImageIcon, Loader2, CheckCircle, XCircle } from 'lucide-react';
@@ -11,6 +12,9 @@ const Collections = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -79,14 +83,22 @@ const Collections = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('آیا از حذف این کالکشن مطمئن هستید؟')) return;
+  const handleDelete = (id: string) => {
+    setDeleteModal({ isOpen: true, id });
+  };
+
+  const onConfirmDelete = async () => {
+    if (!deleteModal.id) return;
+    setIsDeleting(true);
     try {
-      await collectionService.delete(id);
+      await collectionService.delete(deleteModal.id);
       fetchCollections();
+      setDeleteModal({ isOpen: false, id: null });
     } catch (error) {
       console.error(error);
       alert('خطا در حذف');
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -251,6 +263,18 @@ const Collections = () => {
             </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, id: null })}
+        onConfirm={onConfirmDelete}
+        title="حذف کالکشن"
+        message="آیا از حذف این کالکشن مطمئن هستید؟ این عملیات غیرقابل بازگشت است."
+        confirmText="حذف"
+        cancelText="انصراف"
+        isLoading={isDeleting}
+        type="danger"
+      />
     </div>
   );
 };
