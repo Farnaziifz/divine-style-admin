@@ -11,12 +11,24 @@ export interface ProductVariant {
   specifications?: Record<string, any>;
 }
 
+export interface Category {
+  id: string;
+  title: string;
+}
+
+export interface Collection {
+  id: string;
+  title: string;
+}
+
 export interface Product {
   id: string;
   title: string;
   description: string;
   categoryId: string;
+  category?: Category;
   collectionIds?: string[];
+  collections?: Collection[];
   images: string[];
   variants?: ProductVariant[];
   createdAt: string;
@@ -24,10 +36,8 @@ export interface Product {
 }
 
 export const productService = {
-  create: async (data: FormData): Promise<Product> => {
-    const response = await api.post('/products', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  create: async (data: any): Promise<Product> => {
+    const response = await api.post('/products', data);
     return response.data;
   },
 
@@ -41,10 +51,8 @@ export const productService = {
     return response.data;
   },
 
-  update: async (id: string, data: FormData): Promise<Product> => {
-    const response = await api.patch(`/products/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  update: async (id: string, data: any): Promise<Product> => {
+    const response = await api.patch(`/products/${id}`, data);
     return response.data;
   },
 

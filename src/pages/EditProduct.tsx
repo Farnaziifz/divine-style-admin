@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Select } from '../components/common/Select';
 import {
   categoryService,
@@ -15,17 +15,21 @@ import {
 } from '../services/specification.service';
 import { productService } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
+import { getImageUrl } from '../utils/image';
 import {
   X,
   Plus,
   Upload,
   Loader2,
+  ArrowRight,
 } from 'lucide-react';
 
-const CreateProduct = () => {
+const EditProduct = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Data Sources
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,8 +44,12 @@ const CreateProduct = () => {
   const [basePrice, setBasePrice] = useState<number>(0);
 
   // Form State - Media
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  // existingImages stores URLs of images already on the server
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  // newImages stores File objects for newly added images
+  const [newImages, setNewImages] = useState<File[]>([]);
+  // newImagePreviews stores data URLs for previews of new images
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 
   // Form State - Variants
   const [colors, setColors] = useState<string[]>([]);
@@ -56,49 +64,102 @@ const CreateProduct = () => {
     color?: string;
     price: number;
     stock: number;
-    specifications: Record<string, string | number>;
+    specifications: Record<string, any>;
   }
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]); // Selected Spec Key IDs
   
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (id) {
+      fetchData(id);
+    }
+  }, [id]);
 
-  const fetchData = async () => {
+  const fetchData = async (productId: string) => {
     try {
-      const [cats, cols, specs] = await Promise.all([
+      setIsLoading(true);
+      const [cats, cols, specs, product] = await Promise.all([
         categoryService.getAll(),
         collectionService.getAll(),
         specificationService.getAll(),
+        productService.getById(productId),
       ]);
       setCategories(cats.data);
       setCollections(cols.data);
       setSpecKeys(specs);
+
+      // Populate Form
+      setTitle(product.title);
+      setDescription(product.description);
+      setCategoryId(product.categoryId);
+      setCollectionId(product.collectionIds?.[0] || '');
+      setExistingImages(product.images || []);
+
+      // Populate Variants & Specs
+      if (product.variants && product.variants.length > 0) {
+        // Extract unique colors and sizes
+        const uniqueColors = new Set<string>();
+        const uniqueSizes = new Set<string>();
+        const uniqueSpecKeys = new Set<string>();
+        
+        // Base price from first variant if available
+        setBasePrice(product.variants[0].price);
+
+        const mappedVariants: Variant[] = product.variants.map(v => {
+          if (v.color) uniqueColors.add(v.color);
+          if (v.size) uniqueSizes.add(v.size);
+          if (v.specifications) {
+            Object.keys(v.specifications).forEach(k => uniqueSpecKeys.add(k));
+          }
+
+          return {
+            id: Math.random().toString(36).substr(2, 9),
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            price: v.price,
+            stock: v.stock,
+            specifications: v.specifications || {},
+          };
+        });
+
+        setVariants(mappedVariants);
+        setColors(Array.from(uniqueColors));
+        setSizes(Array.from(uniqueSizes));
+        setSelectedSpecs(Array.from(uniqueSpecKeys));
+      }
+
     } catch (error) {
       console.error(error);
+      alert('خطا در دریافت اطلاعات محصول');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setImages((prev) => [...prev, ...files]);
+      setNewImages((prev) => [...prev, ...files]);
 
       files.forEach((file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setImagePreviews((prev) => [...prev, reader.result as string]);
+          setNewImagePreviews((prev) => [...prev, reader.result as string]);
         };
         reader.readAsDataURL(file);
       });
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addColor = () => {
@@ -116,6 +177,8 @@ const CreateProduct = () => {
   };
 
   useEffect(() => {
+    if (isLoading) return; // Don't run this effect while loading initial data
+
     setVariants((prev) => {
       const newVariants: Variant[] = [];
       const findExisting = (c?: string, s?: string) =>
@@ -167,20 +230,22 @@ const CreateProduct = () => {
             });
         });
       } else {
+        // If no colors/sizes, preserve existing 'default' variant or create one
         const existing = findExisting(undefined, undefined);
         if (existing) newVariants.push(existing);
-        else
-          newVariants.push({
-            id: Math.random().toString(36).substr(2, 9),
-            sku: 'default',
-            price: basePrice,
-            stock: 0,
-            specifications: {},
-          });
+        else if (colors.length === 0 && sizes.length === 0) {
+             newVariants.push({
+                id: Math.random().toString(36).substr(2, 9),
+                sku: 'default',
+                price: basePrice,
+                stock: 0,
+                specifications: {},
+              });
+        }
       }
       return newVariants;
     });
-  }, [colors, sizes, basePrice]);
+  }, [colors, sizes, basePrice, isLoading]);
 
   const updateVariant = (id: string, field: keyof Variant, value: string | number) => {
     setVariants((prev) =>
@@ -202,38 +267,58 @@ const CreateProduct = () => {
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
+    if (!id) return;
+    setIsSaving(true);
     try {
-      const uploadPromises = images.map((file) => uploadService.upload(file));
-      const uploadedUrls = await Promise.all(uploadPromises);
+      // 1. Upload new images
+      const uploadPromises = newImages.map((file) => uploadService.upload(file));
+      const newUploadedUrls = await Promise.all(uploadPromises);
+
+      // 2. Combine with existing images
+      const finalImages = [...existingImages, ...newUploadedUrls];
 
       const payload = {
         title,
         description,
         categoryId,
         collectionIds: collectionId ? [collectionId] : undefined,
-        images: uploadedUrls,
+        images: finalImages,
         variants: variants.map((v) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id, ...rest } = v;
+          const { id: _id, ...rest } = v;
           return rest;
         }),
       };
 
-      await productService.create(payload);
+      await productService.update(id, payload);
       navigate('/products');
     } catch (error) {
       console.error(error);
-      alert('خطا در ایجاد محصول');
+      alert('خطا در ویرایش محصول');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+      return (
+          <div className="flex justify-center items-center h-96">
+              <Loader2 className="animate-spin text-zafting-accent" size={48} />
+          </div>
+      )
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">افزودن محصول جدید</h1>
+        <h1 className="text-2xl font-bold text-gray-800">ویرایش محصول</h1>
+        <button
+          onClick={() => navigate('/products')}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowRight size={20} />
+          <span>بازگشت</span>
+        </button>
       </div>
 
       {/* Stepper */}
@@ -373,20 +458,41 @@ const CreateProduct = () => {
               <span>برای آپلود تصاویر کلیک کنید یا رها کنید</span>
             </div>
           </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            {imagePreviews.map((src, i) => (
-              <div key={i} className="relative group">
+            {/* Existing Images */}
+            {existingImages.map((src, i) => (
+              <div key={`existing-${i}`} className="relative group">
                 <img
-                  src={src}
-                  alt={`Preview ${i}`}
+                  src={getImageUrl(src)}
+                  alt={`Existing ${i}`}
                   className="w-full h-32 object-cover rounded-lg"
                 />
                 <button
-                  onClick={() => removeImage(i)}
+                  onClick={() => removeExistingImage(i)}
                   className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={16} />
                 </button>
+                <span className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">قبلی</span>
+              </div>
+            ))}
+
+            {/* New Images */}
+            {newImagePreviews.map((src, i) => (
+              <div key={`new-${i}`} className="relative group">
+                <img
+                  src={src}
+                  alt={`New Preview ${i}`}
+                  className="w-full h-32 object-cover rounded-lg border-2 border-green-500"
+                />
+                <button
+                  onClick={() => removeNewImage(i)}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X size={16} />
+                </button>
+                <span className="absolute bottom-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">جدید</span>
               </div>
             ))}
           </div>
@@ -585,11 +691,11 @@ const CreateProduct = () => {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isSaving}
             className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
           >
-            {isLoading && <Loader2 className="animate-spin" size={20} />}
-            ثبت نهایی محصول
+            {isSaving && <Loader2 className="animate-spin" size={20} />}
+            ذخیره تغییرات
           </button>
         )}
       </div>
@@ -597,4 +703,4 @@ const CreateProduct = () => {
   );
 };
 
-export default CreateProduct;
+export default EditProduct;
