@@ -57,6 +57,8 @@ const EditProduct = () => {
   const [colorInput, setColorInput] = useState('');
   const [sizeInput, setSizeInput] = useState('');
 
+  type SpecificationValue = string | number;
+
   interface Variant {
     id: string; // temp id
     sku: string;
@@ -64,7 +66,7 @@ const EditProduct = () => {
     color?: string;
     price: number;
     stock: number;
-    specifications: Record<string, any>;
+    specifications: Record<string, SpecificationValue>;
   }
 
   const [variants, setVariants] = useState<Variant[]>([]);

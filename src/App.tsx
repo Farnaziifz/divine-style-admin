@@ -15,6 +15,7 @@ import ProductList from './pages/ProductList';
 import CreateProduct from './pages/CreateProduct';
 import ProductDetail from './pages/ProductDetail';
 import EditProduct from './pages/EditProduct';
+import Orders from './pages/Orders';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!localStorage.getItem('accessToken');
@@ -49,7 +50,7 @@ function App() {
             <Route path="categories" element={<Categories />} />
             <Route path="specifications" element={<Specifications />} />
           </Route>
-          <Route path="orders" element={<div>مدیریت سفارشات</div>} />
+          <Route path="orders" element={<Orders />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
           <Route path="settings">

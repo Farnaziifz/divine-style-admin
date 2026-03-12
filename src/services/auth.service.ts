@@ -9,13 +9,25 @@ export interface SendOtpResponse {
 export interface VerifyOtpResponse {
   accessToken: string;
   refreshToken: string;
-  user: any;
+  user: {
+    id: string;
+    mobile: string;
+    role?: string;
+    name?: string | null;
+    lastName?: string | null;
+  };
 }
 
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
-  user: any;
+  user: {
+    id: string;
+    mobile: string;
+    role?: string;
+    name?: string | null;
+    lastName?: string | null;
+  };
 }
 
 export const authService = {
