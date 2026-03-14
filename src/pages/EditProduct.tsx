@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Select } from '../components/common/Select';
+import { Modal } from '../components/common/Modal';
 import {
   categoryService,
   type Category,
@@ -13,6 +14,7 @@ import {
   specificationService,
   type SpecificationKey,
 } from '../services/specification.service';
+import { sizeService, type Size } from '../services/size.service';
 import { productService, type SpecificationValue } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
 import { getImageUrl } from '../utils/image';
@@ -35,6 +37,7 @@ const EditProduct = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [specKeys, setSpecKeys] = useState<SpecificationKey[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<Size[]>([]);
 
   // Form State - Basic Info
   const [title, setTitle] = useState('');
@@ -57,7 +60,9 @@ const EditProduct = () => {
   const [colors, setColors] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
   const [colorInput, setColorInput] = useState('');
-  const [sizeInput, setSizeInput] = useState('');
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+  const [newSizeName, setNewSizeName] = useState('');
+  const [isAddingSize, setIsAddingSize] = useState(false);
 
   interface Variant {
     id: string; // temp id
@@ -82,15 +87,17 @@ const EditProduct = () => {
   const fetchData = async (productId: string) => {
     try {
       setIsLoading(true);
-      const [cats, cols, specs, product] = await Promise.all([
+      const [cats, cols, specs, sizeList, product] = await Promise.all([
         categoryService.getAll(),
         collectionService.getAll(),
         specificationService.getAll(),
+        sizeService.getAll(),
         productService.getById(productId),
       ]);
       setCategories(cats.data);
       setCollections(cols.data);
       setSpecKeys(specs);
+      setSizeOptions(sizeList);
 
       // Populate Form
       setTitle(product.title);
@@ -175,10 +182,24 @@ const EditProduct = () => {
     }
   };
 
-  const addSize = () => {
-    if (sizeInput && !sizes.includes(sizeInput)) {
-      setSizes([...sizes, sizeInput]);
-      setSizeInput('');
+  const addSizeFromList = (name: string) => {
+    if (name && !sizes.includes(name)) setSizes([...sizes, name]);
+  };
+
+  const addNewSize = async () => {
+    const name = newSizeName.trim();
+    if (!name) return;
+    setIsAddingSize(true);
+    try {
+      const created = await sizeService.create({ name });
+      setSizeOptions((prev) => [...prev, created].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)));
+      if (!sizes.includes(created.name)) setSizes([...sizes, created.name]);
+      setNewSizeName('');
+      setIsSizeModalOpen(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAddingSize(false);
     }
   };
 
@@ -579,23 +600,32 @@ const EditProduct = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  سایزها
+                  سایزها (از لیست انتخاب یا اضافه کنید)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={sizeInput}
-                    onChange={(e) => setSizeInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addSize()}
-                    placeholder="مثال: 42, XL"
-                    className="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none"
-                  />
-                  <button
-                    onClick={addSize}
-                    className="bg-gray-100 p-2 rounded-xl hover:bg-gray-200"
+                <div className="flex gap-2 flex-wrap items-center">
+                  <select
+                    className="px-4 py-2 rounded-xl border border-gray-200 outline-none min-w-[180px] focus:border-zafting-accent"
+                    value=""
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '__add_new__') {
+                        setIsSizeModalOpen(true);
+                        e.target.value = '';
+                        return;
+                      }
+                      if (value) addSizeFromList(value);
+                    }}
                   >
-                    <Plus size={20} />
-                  </button>
+                    <option value="">انتخاب سایز...</option>
+                    {sizeOptions
+                      .filter((opt) => !sizes.includes(opt.name))
+                      .map((opt) => (
+                        <option key={opt.id} value={opt.name}>
+                          {opt.name}
+                        </option>
+                      ))}
+                    <option value="__add_new__">➕ افزودن سایز جدید</option>
+                  </select>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {sizes.map((s) => (
@@ -755,6 +785,52 @@ const EditProduct = () => {
           </button>
         )}
       </div>
+
+      {/* Modal: افزودن سایز جدید */}
+      <Modal
+        isOpen={isSizeModalOpen}
+        onClose={() => {
+          setIsSizeModalOpen(false);
+          setNewSizeName('');
+        }}
+        title="افزودن سایز جدید"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addNewSize();
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">نام سایز *</label>
+            <input
+              type="text"
+              value={newSizeName}
+              onChange={(e) => setNewSizeName(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-zafting-accent outline-none"
+              placeholder="مثال: 42, XL, M"
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => { setIsSizeModalOpen(false); setNewSizeName(''); }}
+              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              انصراف
+            </button>
+            <button
+              type="submit"
+              disabled={isAddingSize || !newSizeName.trim()}
+              className="px-4 py-2 rounded-xl bg-zafting-accent text-white hover:bg-zafting-accent/90 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isAddingSize && <Loader2 size={18} className="animate-spin" />}
+              ذخیره
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
