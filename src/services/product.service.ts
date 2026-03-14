@@ -9,6 +9,7 @@ export interface ProductVariant {
   colorCode?: string;
   price: number;
   discountPrice?: number;
+  discountPercent?: number;
   stock: number;
   specifications?: Record<string, SpecificationValue>;
 }
@@ -33,6 +34,8 @@ export interface Product {
   collections?: Collection[];
   images: string[];
   variants?: ProductVariant[];
+  isFeatured?: boolean;
+  showInIntro?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +47,8 @@ export interface ProductUpsertPayload {
   collectionIds?: string[];
   images: string[];
   variants?: ProductVariant[];
+  isFeatured?: boolean;
+  showInIntro?: boolean;
 }
 
 export interface PaginationMeta {

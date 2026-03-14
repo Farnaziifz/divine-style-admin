@@ -25,8 +25,14 @@ export const categoryService = {
   getAll: async (
     page = 1,
     limit = 10,
+    search?: string,
   ): Promise<PaginatedResponse<Category>> => {
-    const response = await api.get('/categories', { params: { page, limit } });
+    const params: { page: number; limit: number; search?: string } = {
+      page,
+      limit,
+    };
+    if (search != null && search.trim() !== '') params.search = search.trim();
+    const response = await api.get('/categories', { params });
     return response.data;
   },
 

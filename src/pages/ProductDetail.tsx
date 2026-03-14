@@ -173,6 +173,8 @@ const ProductDetail = () => {
                         <th className="px-4 py-3">رنگ</th>
                         <th className="px-4 py-3">سایز</th>
                         <th className="px-4 py-3">قیمت</th>
+                        <th className="px-4 py-3">تخفیف</th>
+                        <th className="px-4 py-3">قیمت نهایی</th>
                         <th className="px-4 py-3">موجودی</th>
                         <th className="px-4 py-3">مشخصات فنی</th>
                       </tr>
@@ -199,6 +201,14 @@ const ProductDetail = () => {
                           <td className="px-4 py-3">{variant.size || '-'}</td>
                           <td className="px-4 py-3">
                             {variant.price.toLocaleString()} تومان
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">
+                            {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
+                              ? `${variant.discountPercent}%`
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {(variant.discountPrice ?? variant.price).toLocaleString()} تومان
                           </td>
                           <td className="px-4 py-3">
                             <span

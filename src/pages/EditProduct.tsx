@@ -13,7 +13,7 @@ import {
   specificationService,
   type SpecificationKey,
 } from '../services/specification.service';
-import { productService } from '../services/product.service';
+import { productService, type SpecificationValue } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
 import { getImageUrl } from '../utils/image';
 import {
@@ -42,6 +42,8 @@ const EditProduct = () => {
   const [categoryId, setCategoryId] = useState('');
   const [collectionId, setCollectionId] = useState('');
   const [basePrice, setBasePrice] = useState<number>(0);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [showInIntro, setShowInIntro] = useState(false);
 
   // Form State - Media
   // existingImages stores URLs of images already on the server
@@ -57,14 +59,13 @@ const EditProduct = () => {
   const [colorInput, setColorInput] = useState('');
   const [sizeInput, setSizeInput] = useState('');
 
-  type SpecificationValue = string | number;
-
   interface Variant {
     id: string; // temp id
     sku: string;
     size?: string;
     color?: string;
     price: number;
+    discountPercent?: number;
     stock: number;
     specifications: Record<string, SpecificationValue>;
   }
@@ -97,6 +98,8 @@ const EditProduct = () => {
       setCategoryId(product.categoryId);
       setCollectionId(product.collectionIds?.[0] || '');
       setExistingImages(product.images || []);
+      setIsFeatured(product.isFeatured ?? false);
+      setShowInIntro(product.showInIntro ?? false);
 
       // Populate Variants & Specs
       if (product.variants && product.variants.length > 0) {
@@ -121,6 +124,7 @@ const EditProduct = () => {
             size: v.size,
             color: v.color,
             price: v.price,
+            discountPercent: v.discountPercent,
             stock: v.stock,
             specifications: v.specifications || {},
           };
@@ -249,7 +253,11 @@ const EditProduct = () => {
     });
   }, [colors, sizes, basePrice, isLoading]);
 
-  const updateVariant = (id: string, field: keyof Variant, value: string | number) => {
+  const updateVariant = (
+    id: string,
+    field: keyof Variant,
+    value: string | number | undefined,
+  ) => {
     setVariants((prev) =>
       prev.map((v) => (v.id === id ? { ...v, [field]: value } : v))
     );
@@ -285,6 +293,8 @@ const EditProduct = () => {
         categoryId,
         collectionIds: collectionId ? [collectionId] : undefined,
         images: finalImages,
+        isFeatured,
+        showInIntro,
         variants: variants.map((v) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { id: _id, ...rest } = v;
@@ -410,6 +420,27 @@ const EditProduct = () => {
                 onChange={(e) => setBasePrice(Number(e.target.value))}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
               />
+            </div>
+
+            <div className="md:col-span-2 flex flex-wrap items-center gap-6">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isFeatured}
+                  onChange={(e) => setIsFeatured(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
+                />
+                <span className="text-sm font-medium text-gray-700">محصول منتخب</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showInIntro}
+                  onChange={(e) => setShowInIntro(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
+                />
+                <span className="text-sm font-medium text-gray-700">نمایش در اینترو</span>
+              </label>
             </div>
 
             <div className="md:col-span-2">
@@ -617,6 +648,8 @@ const EditProduct = () => {
                       <th className="py-3 text-right">رنگ</th>
                       <th className="py-3 text-right">سایز</th>
                       <th className="py-3 text-right">قیمت</th>
+                      <th className="py-3 text-right">تخفیف (%)</th>
+                      <th className="py-3 text-right">قیمت نهایی</th>
                       <th className="py-3 text-right">موجودی</th>
                       <th className="py-3 text-right">مشخصات</th>
                     </tr>
@@ -634,6 +667,27 @@ const EditProduct = () => {
                                 onChange={(e) => updateVariant(variant.id, 'price', Number(e.target.value))}
                                 className="w-24 px-2 py-1 border rounded"
                             />
+                        </td>
+                        <td className="py-3">
+                            <input 
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={variant.discountPercent ?? ''}
+                                onChange={(e) =>
+                                  updateVariant(
+                                    variant.id,
+                                    'discountPercent',
+                                    e.target.value === '' ? undefined : Number(e.target.value),
+                                  )}
+                                className="w-20 px-2 py-1 border rounded"
+                                placeholder="مثلاً 20"
+                            />
+                        </td>
+                        <td className="py-3 text-gray-600">
+                          {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
+                            ? (Math.round(((variant.price * (100 - variant.discountPercent)) / 100) * 100) / 100).toLocaleString()
+                            : variant.price.toLocaleString()}
                         </td>
                         <td className="py-3">
                              <input 
@@ -654,7 +708,7 @@ const EditProduct = () => {
                                             <span className="text-gray-500 w-20">{specDef.label}:</span>
                                             <input 
                                                 type="text"
-                                                value={variant.specifications[specKey] || ''}
+                                                value={String(variant.specifications[specKey] ?? '')}
                                                 onChange={(e) => updateVariantSpec(variant.id, specKey, e.target.value)}
                                                 className="px-2 py-1 border rounded w-32"
                                                 placeholder="مقدار..."

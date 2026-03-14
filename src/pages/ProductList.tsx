@@ -56,6 +56,15 @@ const ProductList = () => {
     setIsDeleteModalOpen(false);
   };
 
+  const formatPrice = (value: number) =>
+    value.toLocaleString('fa-IR', { maximumFractionDigits: 0 });
+
+  const getBasePrice = (item: Product): number | null => {
+    if (!item.variants?.length) return null;
+    const prices = item.variants.map((v) => Number(v.price));
+    return Math.min(...prices);
+  };
+
   const columns: Column<Product>[] = [
     {
       key: 'image',
@@ -72,7 +81,25 @@ const ProductList = () => {
         </div>
       ),
     },
-    { key: 'title', title: 'عنوان' },
+    {
+      key: 'title',
+      title: 'عنوان',
+      render: (item) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span>{item.title}</span>
+          {item.isFeatured && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-full">
+              منتخب
+            </span>
+          )}
+          {item.showInIntro && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-sky-100 text-sky-800 rounded-full">
+              اینترو
+            </span>
+          )}
+        </div>
+      ),
+    },
     {
       key: 'category',
       title: 'دسته بندی',
@@ -82,6 +109,15 @@ const ProductList = () => {
       key: 'collection',
       title: 'کالکشن',
       render: (item) => item.collections?.[0]?.title || 'نامشخص',
+    },
+    {
+      key: 'basePrice',
+      title: 'قیمت پایه (تومان)',
+      render: (item) => {
+        const price = getBasePrice(item);
+        if (price == null) return <span className="text-gray-400">—</span>;
+        return <span className="font-medium">{formatPrice(price)}</span>;
+      },
     },
     {
       key: 'actions',
