@@ -8,6 +8,7 @@ import {
   Package,
   ChevronDown,
   ChevronLeft,
+  TicketPercent,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -35,6 +36,7 @@ const Sidebar = () => {
       ],
     },
     { name: 'سفارشات', icon: ShoppingBag, path: '/orders' },
+    { name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' },
     { name: 'کاربران', icon: Users, path: '/users' },
     {
       name: 'تنظیمات',

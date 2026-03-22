@@ -127,7 +127,7 @@ const [showInIntro, setShowInIntro] = useState(false);
         categoryService.getAll(1, 50),
         collectionService.getAll(1, 50),
         specificationService.getAll(),
-        sizeService.getAll().catch((err) => {
+        sizeService.getAll().catch(() => {
           setSizesLoadError('بارگذاری سایزها ناموفق بود.');
           return [];
         }),

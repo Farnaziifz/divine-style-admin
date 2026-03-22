@@ -1,3 +1,11 @@
+# Divine Style Admin
+
+## تاریخ شمسی (یکدست)
+
+برای فیلدهای تاریخ از کامپوننت **`PersianDatePicker`** (`src/components/common/PersianDatePicker.tsx`) استفاده کنید؛ خروجی برای API همیشه **میلادی `YYYY-MM-DD`** است. توابع کمکی در `src/utils/persianDate.ts`.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
