@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin } from 'lucide-react';
-import { orderService, type OrderDetails } from '../services/order.service';
+import { orderService, type OrderComment, type OrderDetails } from '../services/order.service';
 import { getImageUrl } from '../utils/image';
 import { Select } from '../components/common/Select';
 
@@ -49,6 +49,10 @@ const OrderDetail = () => {
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusSaved, setStatusSaved] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [commentSaving, setCommentSaving] = useState(false);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
 
   const addressText = useMemo(() => {
     const a = (order?.shippingAddress ?? null) as Record<string, unknown> | null;
@@ -94,6 +98,18 @@ const OrderDetail = () => {
     };
   }, [orderCode]);
 
+  const comments = order?.comments ?? [];
+  const commentsByParent = useMemo(() => {
+    const map = new Map<string | null, OrderComment[]>();
+    for (const c of comments) {
+      const key = c.parentId ?? null;
+      const arr = map.get(key) ?? [];
+      arr.push(c);
+      map.set(key, arr);
+    }
+    return map;
+  }, [comments]);
+
   if (isLoading) {
     return (
       <div className="p-8 flex justify-center bg-white rounded-xl shadow-sm border border-gray-100">
@@ -116,6 +132,115 @@ const OrderDetail = () => {
       </div>
     );
   }
+
+  const authorLabel = (c: OrderComment) => {
+    if (c.authorRole === 'ADMIN') {
+      const name = c.authorUser
+        ? [c.authorUser.name, c.authorUser.lastName].filter(Boolean).join(' ')
+        : '';
+      return name ? `ادمین (${name})` : 'ادمین';
+    }
+    const fullName = c.authorUser
+      ? [c.authorUser.name, c.authorUser.lastName].filter(Boolean).join(' ')
+      : '';
+    const mobile = c.authorUser?.mobile;
+    if (fullName && mobile) return `${fullName} (${mobile})`;
+    if (mobile) return mobile;
+    return 'کاربر';
+  };
+
+  const commentBg = (role: OrderComment['authorRole']) => {
+    if (role === 'ADMIN') return 'bg-zafting-accent/5 border-zafting-accent/15';
+    return 'bg-gray-50 border-gray-100';
+  };
+
+  const renderComment = (c: OrderComment, depth: number) => {
+    const replies = commentsByParent.get(c.id) ?? [];
+    return (
+      <div key={c.id} style={{ marginRight: depth * 16 }}>
+        <div className={`rounded-xl border p-4 ${commentBg(c.authorRole)}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {authorLabel(c)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDateTime(c.createdAt)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setReplyToId(c.id);
+                setReplyMessage('');
+              }}
+              className="shrink-0 px-3 py-2 rounded-lg border border-gray-200 hover:bg-white transition-colors text-xs font-medium text-gray-700"
+            >
+              پاسخ
+            </button>
+          </div>
+          <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap leading-7">
+            {c.message}
+          </p>
+
+          {replyToId === c.id ? (
+            <div className="mt-4">
+              <textarea
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="پاسخ ادمین..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#6B5B54] transition-all min-h-[90px]"
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!replyMessage.trim()) return;
+                    setCommentSaving(true);
+                    try {
+                      const created = await orderService.createComment({
+                        orderCode: order.orderCode,
+                        message: replyMessage.trim(),
+                        parentId: c.id,
+                      });
+                      setOrder({
+                        ...order,
+                        comments: [...comments, created],
+                      });
+                      setReplyToId(null);
+                      setReplyMessage('');
+                    } finally {
+                      setCommentSaving(false);
+                    }
+                  }}
+                  disabled={commentSaving || !replyMessage.trim()}
+                  className="px-4 py-2.5 rounded-lg bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {commentSaving ? 'در حال ارسال...' : 'ارسال پاسخ'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyToId(null);
+                    setReplyMessage('');
+                  }}
+                  className="px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700"
+                >
+                  انصراف
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {replies.length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {replies.map((r) => renderComment(r, depth + 1))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const statusOptions: Array<{ value: NonNullable<OrderDetails['orderStatus']>; label: string }> = [
     { value: 'PENDING_PAYMENT', label: 'در انتظار پرداخت' },
@@ -291,6 +416,56 @@ const OrderDetail = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-bold text-[#2A2A2A] mb-4">گفتگو درباره سفارش</h2>
+
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                پیام جدید ادمین
+              </label>
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="پیام خود را بنویسید..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#6B5B54] transition-all min-h-[100px]"
+              />
+              <div className="flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!newComment.trim()) return;
+                    setCommentSaving(true);
+                    try {
+                      const created = await orderService.createComment({
+                        orderCode: order.orderCode,
+                        message: newComment.trim(),
+                      });
+                      setOrder({
+                        ...order,
+                        comments: [...comments, created],
+                      });
+                      setNewComment('');
+                    } finally {
+                      setCommentSaving(false);
+                    }
+                  }}
+                  disabled={commentSaving || !newComment.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {commentSaving ? 'در حال ارسال...' : 'ارسال پیام'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {commentsByParent.get(null)?.length ? (
+                (commentsByParent.get(null) ?? []).map((c) => renderComment(c, 0))
+              ) : (
+                <p className="text-sm text-gray-500">هنوز پیامی ثبت نشده است.</p>
+              )}
             </div>
           </div>
         </div>

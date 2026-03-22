@@ -47,11 +47,22 @@ export interface OrderPayment {
   verifiedAt: string | null;
 }
 
+export interface OrderComment {
+  id: string;
+  orderId: string;
+  authorRole: 'USER' | 'ADMIN';
+  authorUser: OrderUser | null;
+  parentId: string | null;
+  message: string;
+  createdAt: string;
+}
+
 export interface OrderDetails extends Order {
   shippingAddress?: unknown;
   paidAt?: string | null;
   items: OrderItem[];
   payments: OrderPayment[];
+  comments?: OrderComment[];
 }
 
 export interface PaginatedResponse<T> {
@@ -80,5 +91,20 @@ export const orderService = {
   updateOrderStatus: async (orderCode: string, status: NonNullable<Order['orderStatus']>) => {
     const response = await api.patch(`/orders/${encodeURIComponent(orderCode)}/status`, { status });
     return response.data;
+  },
+
+  createComment: async (params: {
+    orderCode: string;
+    message: string;
+    parentId?: string;
+  }) => {
+    const response = await api.post(
+      `/orders/${encodeURIComponent(params.orderCode)}/comments`,
+      {
+        message: params.message,
+        ...(params.parentId ? { parentId: params.parentId } : {}),
+      },
+    );
+    return response.data as OrderComment;
   },
 };
