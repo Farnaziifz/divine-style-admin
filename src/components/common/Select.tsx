@@ -4,6 +4,8 @@ import { ChevronDown, Check } from 'lucide-react';
 interface Option {
   label: string;
   value: string | number;
+  className?: string;
+  selectedClassName?: string;
 }
 
 interface SelectProps {
@@ -78,7 +80,7 @@ export const Select = ({
         onClick={() => setIsOpen(!isOpen)}
       >
         <span
-          className={`${selectedOption ? 'text-gray-900' : 'text-gray-400'}`}
+          className={`${selectedOption ? `text-gray-900 ${selectedOption.className || ''}` : 'text-gray-400'}`}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
@@ -95,21 +97,26 @@ export const Select = ({
           {options.length > 0 ? (
             <div className="p-1">
               {options.map((opt) => (
+                (() => {
+                  const isSelected = value === opt.value;
+                  const base =
+                    'px-3 py-2.5 rounded-lg cursor-pointer flex items-center justify-between transition-colors';
+                  const selected =
+                    opt.selectedClassName || 'bg-[#6B5B54]/5 text-[#6B5B54] font-medium';
+                  const notSelected = `text-gray-700 hover:bg-gray-50 ${opt.className || ''}`;
+                  const className = `${base} ${isSelected ? selected : notSelected}`;
+
+                  return (
                 <div
                   key={opt.value}
-                  className={`
-                    px-3 py-2.5 rounded-lg cursor-pointer flex items-center justify-between transition-colors
-                    ${
-                      value === opt.value
-                        ? 'bg-[#6B5B54]/5 text-[#6B5B54] font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }
-                  `}
+                  className={className}
                   onClick={() => handleSelect(opt.value)}
                 >
                   <span>{opt.label}</span>
                   {value === opt.value && <Check size={16} />}
                 </div>
+                  );
+                })()
               ))}
             </div>
           ) : (

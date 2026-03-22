@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import type { MouseEvent } from 'react';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -9,17 +10,31 @@ import {
   ChevronDown,
   ChevronLeft,
   TicketPercent,
+  LogOut,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
-const Sidebar = () => {
+type SidebarProps = {
+  /** موبایل: منو باز است */
+  mobileOpen?: boolean;
+  /** بعد از کلیک روی لینک (بستن دراور موبایل) */
+  onNavigate?: () => void;
+};
+
+const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [openSubmenus, setOpenSubmenus] = useState<string[]>(['/settings']);
 
   const toggleSubmenu = (path: string) => {
     setOpenSubmenus((prev) =>
       prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
     );
+  };
+
+  const handleNav = (e?: MouseEvent) => {
+    e?.stopPropagation();
+    onNavigate?.();
   };
 
   const menuItems = [
@@ -50,16 +65,18 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-white/50 backdrop-blur-md border-l border-zafting-accent/10 h-screen fixed right-0 top-0 overflow-y-auto z-50">
-      <div className="p-6 flex items-center justify-center border-b border-zafting-accent/10">
-        <div className="flex flex-col items-center gap-2">
-          <img src={logo} alt="Divine Style Logo" className="w-12 h-12" />
-          <h1 className="text-xl font-serif text-zafting-accent font-bold">
-            Divine Style Admin
-          </h1>
-        </div>
+    <aside
+      className={`fixed right-0 top-0 z-50 h-dvh w-[min(18rem,88vw)] overflow-y-auto overscroll-contain border-l border-zafting-accent/10 bg-white/95 backdrop-blur-md shadow-xl transition-transform duration-200 ease-out lg:shadow-none lg:bg-white/50 ${
+        mobileOpen ? 'translate-x-0' : 'translate-x-full'
+      } lg:translate-x-0`}
+    >
+      <div className="flex flex-col items-center gap-2 border-b border-zafting-accent/10 p-4 sm:p-6">
+        <img src={logo} alt="Divine Style Logo" className="h-10 w-10 sm:h-12 sm:w-12" />
+        <h1 className="text-center text-base font-bold font-serif text-zafting-accent sm:text-xl">
+          Divine Style Admin
+        </h1>
       </div>
-      <nav className="mt-6 px-4">
+      <nav className="mt-4 px-3 sm:mt-6 sm:px-4">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -85,9 +102,10 @@ const Sidebar = () => {
                 >
                   <Link
                     to={hasChildren ? '#' : item.path}
-                    className="flex items-center gap-3 flex-1"
+                    className="flex flex-1 items-center gap-3"
                     onClick={(e) => {
                       if (hasChildren) e.preventDefault();
+                      else handleNav(e);
                     }}
                   >
                     <Icon size={20} />
@@ -110,7 +128,8 @@ const Sidebar = () => {
                       <li key={child.path}>
                         <Link
                           to={child.path}
-                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                          onClick={handleNav}
+                          className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
                             location.pathname === child.path
                               ? 'bg-zafting-accent/10 text-zafting-accent font-bold'
                               : 'text-gray-500 hover:text-zafting-text'
@@ -127,6 +146,21 @@ const Sidebar = () => {
           })}
         </ul>
       </nav>
+
+      <div className="mt-6 px-3 pb-6 sm:px-4">
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            localStorage.clear();
+            navigate('/login', { replace: true });
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors border border-red-200 text-red-600 hover:bg-red-50"
+        >
+          <LogOut size={18} />
+          <span className="font-medium">خروج از حساب</span>
+        </button>
+      </div>
     </aside>
   );
 };

@@ -55,14 +55,6 @@ export function SearchableSelectWithAdd({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSearchInput('');
-      onSearchChange('');
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-  }, [isOpen, onSearchChange]);
-
   const handleSelect = useCallback(
     (id: string) => {
       onChange(id);
@@ -85,7 +77,17 @@ export function SearchableSelectWithAdd({
       )}
       <div
         className="w-full px-4 py-3 rounded-xl border bg-white outline-none transition-all cursor-pointer flex items-center justify-between border-gray-200 hover:border-gray-300"
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={() => {
+          setIsOpen((o) => {
+            const next = !o;
+            if (next) {
+              setSearchInput('');
+              onSearchChange('');
+              setTimeout(() => searchInputRef.current?.focus(), 50);
+            }
+            return next;
+          });
+        }}
       >
         <span className={selected ? 'text-gray-900' : 'text-gray-400'}>
           {selected ? selected.title : placeholder}
