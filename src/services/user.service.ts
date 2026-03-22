@@ -21,6 +21,37 @@ export interface UpdateUserDto {
   nationalCode?: string;
 }
 
+export interface UserAddress {
+  id: string;
+  province: string;
+  city: string;
+  address: string;
+  plaque?: string;
+  unit?: string;
+  postalCode?: string;
+  isDefault?: boolean;
+}
+
+export interface CreateUserAddressDto {
+  province: string;
+  city: string;
+  address: string;
+  plaque?: string;
+  unit?: string;
+  postalCode?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateUserAddressDto {
+  province?: string;
+  city?: string;
+  address?: string;
+  plaque?: string;
+  unit?: string;
+  postalCode?: string;
+  isDefault?: boolean;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {
@@ -39,6 +70,29 @@ export const userService = {
 
   updateProfile: async (data: UpdateUserDto): Promise<UserProfile> => {
     const response = await api.put('/user/profile', data);
+    return response.data;
+  },
+
+  getMyAddresses: async (): Promise<UserAddress[]> => {
+    const response = await api.get('/user/profile/addresses');
+    return response.data;
+  },
+
+  addMyAddress: async (data: CreateUserAddressDto): Promise<UserAddress[]> => {
+    const response = await api.post('/user/profile/addresses', data);
+    return response.data;
+  },
+
+  updateMyAddress: async (
+    addressId: string,
+    data: UpdateUserAddressDto,
+  ): Promise<UserAddress[]> => {
+    const response = await api.patch(`/user/profile/addresses/${addressId}`, data);
+    return response.data;
+  },
+
+  deleteMyAddress: async (addressId: string): Promise<UserAddress[]> => {
+    const response = await api.delete(`/user/profile/addresses/${addressId}`);
     return response.data;
   },
 

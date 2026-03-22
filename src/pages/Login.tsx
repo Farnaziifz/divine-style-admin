@@ -59,10 +59,10 @@ const Login = () => {
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
               <div className="w-40 h-40 rounded-2xl flex items-center justify-center text-white">
-                 <img src={logo} alt="Divine Logo" className="w-full h-full" />
+                 <img src={logo} alt="Divine Style Logo" className="w-full h-full" />
               </div>
             </div>
-            <h1 className="text-3xl font-extrabold text-[#2A2A2A]">دیواین</h1>
+            <h1 className="text-3xl font-extrabold text-[#2A2A2A]">دیواین استایل</h1>
             <h2 className="text-2xl font-bold text-[#2A2A2A]">ورود به حساب کاربری</h2>
             <p className="text-gray-500 text-lg">
               برای ورود، لطفا شماره موبایل خود را وارد کنید.
@@ -129,11 +129,11 @@ const Login = () => {
             </div>
             
             <h2 className="text-4xl font-bold leading-tight">
-                مدیریت حرفه‌ای محصولات و سفارشات دیواین
+                مدیریت حرفه‌ای محصولات و سفارشات دیواین استایل
             </h2>
             
             <p className="text-gray-300 text-lg leading-relaxed">
-                با پنل پیشرفته دیواین، تمام فرآیندهای فروشگاه خود را یکپارچه کنید. از مدیریت موجودی تا پیگیری سفارشات، همه چیز در یک نگاه.
+                با پنل پیشرفته دیواین استایل، تمام فرآیندهای فروشگاه خود را یکپارچه کنید. از مدیریت موجودی تا پیگیری سفارشات، همه چیز در یک نگاه.
             </p>
 
             {/* Avatars / Social Proof */}

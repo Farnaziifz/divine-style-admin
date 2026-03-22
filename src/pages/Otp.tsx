@@ -138,7 +138,7 @@ const Otp = () => {
                  بازگشت
                </button>
                <div className="w-40 h-40 rounded-2xl flex items-center justify-center text-white">
-                 <img src={logo} alt="Divine Logo" className="w-full h-full" />
+                 <img src={logo} alt="Divine Style Logo" className="w-full h-full" />
                </div>
             </div>
 
@@ -276,11 +276,11 @@ const Otp = () => {
             </div>
             
             <h2 className="text-4xl font-bold leading-tight">
-                مدیریت حرفه‌ای محصولات و سفارشات دیواین
+                مدیریت حرفه‌ای محصولات و سفارشات دیواین استایل
             </h2>
             
             <p className="text-gray-300 text-lg leading-relaxed">
-                با پنل پیشرفته دیواین، تمام فرآیندهای فروشگاه خود را یکپارچه کنید. از مدیریت موجودی تا پیگیری سفارشات، همه چیز در یک نگاه.
+                با پنل پیشرفته دیواین استایل، تمام فرآیندهای فروشگاه خود را یکپارچه کنید. از مدیریت موجودی تا پیگیری سفارشات، همه چیز در یک نگاه.
             </p>
 
             {/* Avatars / Social Proof */}
