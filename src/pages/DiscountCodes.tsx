@@ -15,6 +15,8 @@ const scopeLabel = (s: DiscountCodeScope) => {
       return 'عمومی';
     case 'SINGLE_USER':
       return 'یک کاربر';
+    case 'MULTIPLE_USERS':
+      return 'چند کاربر';
     case 'USER_GROUP':
       return 'گروه کاربران';
     default:
@@ -87,6 +89,19 @@ const DiscountCodes = () => {
               ({r.user.mobile})
             </span>
           )}
+          {r.scope === 'MULTIPLE_USERS' &&
+            r.eligibleUsers &&
+            r.eligibleUsers.length > 0 && (
+              <span className="text-gray-500 text-xs mr-1 block mt-0.5">
+                {r.eligibleUsers
+                  .slice(0, 3)
+                  .map((u) => u.mobile)
+                  .join('، ')}
+                {r.eligibleUsers.length > 3
+                  ? ` +${r.eligibleUsers.length - 3}`
+                  : ''}
+              </span>
+            )}
         </span>
       ),
     },

@@ -99,12 +99,13 @@ export const userService = {
   getUsers: async (
     page: number = 1,
     limit: number = 10,
-    filters?: { name?: string; mobile?: string }
+    filters?: { name?: string; mobile?: string; excludeAdmin?: boolean },
   ): Promise<PaginatedResponse<UserProfile>> => {
-    const params: Record<string, string | number> = { page, limit };
+    const params: Record<string, string | number | boolean> = { page, limit };
     if (filters?.name) params.name = filters.name;
     if (filters?.mobile) params.mobile = filters.mobile;
-    
+    if (filters?.excludeAdmin) params.excludeAdmin = true;
+
     const response = await api.get('/user/list', { params });
     return response.data;
   },

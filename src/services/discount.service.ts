@@ -1,6 +1,10 @@
 import api from './api';
 
-export type DiscountCodeScope = 'ALL_USERS' | 'SINGLE_USER' | 'USER_GROUP';
+export type DiscountCodeScope =
+  | 'ALL_USERS'
+  | 'SINGLE_USER'
+  | 'MULTIPLE_USERS'
+  | 'USER_GROUP';
 export type DiscountValueType = 'PERCENT' | 'FIXED_AMOUNT';
 
 export interface DiscountCodeUser {
@@ -28,6 +32,8 @@ export interface DiscountCode {
   createdAt: string;
   updatedAt: string;
   user?: DiscountCodeUser | null;
+  /** وقتی scope = MULTIPLE_USERS */
+  eligibleUsers?: DiscountCodeUser[];
 }
 
 export interface CreateDiscountCodeDto {
@@ -36,6 +42,7 @@ export interface CreateDiscountCodeDto {
   scope: DiscountCodeScope;
   userId?: string;
   userGroupId?: string;
+  userIds?: string[];
   valueType: DiscountValueType;
   value: number;
   minOrderAmount?: number;

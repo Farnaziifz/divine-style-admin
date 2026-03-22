@@ -7,7 +7,7 @@ import {
   type CreateDiscountCodeDto,
   type DiscountValueType,
 } from '../../services/discount.service';
-import { userService, type UserProfile } from '../../services/user.service';
+import { SearchableUserMultiSelect } from '../common/SearchableUserMultiSelect';
 import { PersianDatePicker } from '../common/PersianDatePicker';
 import {
   formatGregorianYmdToPersianLong,
@@ -56,9 +56,7 @@ export const AddDiscountModal = ({
   const [expirationDate, setExpirationDate] = useState('');
   const [value, setValue] = useState<number>(10);
   const [maxUses, setMaxUses] = useState<string>('');
-  const [userId, setUserId] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userIds, setUserIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,30 +66,12 @@ export const AddDiscountModal = ({
     setExpirationDate((d) => (d ? d : gregorianYmdAddDays(30)));
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || usageMode !== 'single_user') return;
-    let cancelled = false;
-    (async () => {
-      setLoadingUsers(true);
-      try {
-        const res = await userService.getUsers(1, 100, {});
-        if (!cancelled) setUsers(res.data);
-      } catch {
-        if (!cancelled) setUsers([]);
-      } finally {
-        if (!cancelled) setLoadingUsers(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, usageMode]);
-
   const preview = useMemo(() => {
     const v = Number(value) || 0;
     const valueLabel =
       valueType === 'PERCENT' ? `${v}%` : `${v.toLocaleString('fa-IR')} تومان`;
-    const usageLabel = usageMode === 'public' ? 'عمومی' : 'اختصاصی کاربر';
+    const usageLabel =
+      usageMode === 'public' ? 'عمومی' : 'اختصاصی (چند کاربر)';
     const titleLabel = title.trim() || 'عنوان تخفیف';
     const expLabel = expirationDate
       ? formatGregorianYmdToPersianLong(expirationDate)
@@ -111,7 +91,7 @@ export const AddDiscountModal = ({
     setExpirationDate('');
     setValue(10);
     setMaxUses('');
-    setUserId('');
+    setUserIds([]);
     setError(null);
   };
 
@@ -128,8 +108,8 @@ export const AddDiscountModal = ({
       setError('کد تخفیف را وارد کنید');
       return;
     }
-    if (usageMode === 'single_user' && !userId) {
-      setError('کاربر را انتخاب کنید');
+    if (usageMode === 'single_user' && userIds.length === 0) {
+      setError('حداقل یک کاربر را انتخاب کنید');
       return;
     }
     if (!expirationDate) {
@@ -140,8 +120,8 @@ export const AddDiscountModal = ({
     const payload: CreateDiscountCodeDto = {
       code: code.trim(),
       title: title.trim() || undefined,
-      scope: usageMode === 'public' ? 'ALL_USERS' : 'SINGLE_USER',
-      userId: usageMode === 'single_user' ? userId : undefined,
+      scope: usageMode === 'public' ? 'ALL_USERS' : 'MULTIPLE_USERS',
+      userIds: usageMode === 'single_user' ? userIds : undefined,
       valueType,
       value: Number(value),
       validFrom: startOfTodayIso(),
@@ -288,7 +268,7 @@ export const AddDiscountModal = ({
                   type="button"
                   onClick={() => {
                     setUsageMode('public');
-                    setUserId('');
+                    setUserIds([]);
                   }}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
                     usageMode === 'public'
@@ -307,38 +287,18 @@ export const AddDiscountModal = ({
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  اختصاصی کاربر
+                  اختصاصی کاربر(ان)
                 </button>
               </div>
             </div>
 
             {usageMode === 'single_user' && (
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700">کاربر</label>
-                {loadingUsers ? (
-                  <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-                    <Loader2 className="animate-spin" size={18} />
-                    در حال بارگذاری…
-                  </div>
-                ) : (
-                  <select
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-zafting-accent outline-none bg-white"
-                    required={usageMode === 'single_user'}
-                  >
-                    <option value="">انتخاب کاربر…</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.mobile}
-                        {u.name || u.lastName
-                          ? ` — ${[u.name, u.lastName].filter(Boolean).join(' ')}`
-                          : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              <SearchableUserMultiSelect
+                label="کاربران مجاز"
+                value={userIds}
+                onChange={setUserIds}
+                placeholder="مثلاً 0912…"
+              />
             )}
 
             <div className="space-y-2">
