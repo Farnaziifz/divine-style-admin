@@ -802,7 +802,117 @@ const [showInIntro, setShowInIntro] = useState(false);
                     </div>
                 </div>
 
-              <div className="overflow-x-auto">
+              <div className="space-y-3 md:hidden">
+                {variants.map((variant) => (
+                  <article
+                    key={variant.id}
+                    className="space-y-3 rounded-xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/80 p-4 shadow-sm"
+                  >
+                    <dl className="space-y-3">
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">SKU</dt>
+                        <dd className="mt-1 text-sm">{variant.sku}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">رنگ</dt>
+                        <dd className="mt-1 text-sm">{variant.color || '—'}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">سایز</dt>
+                        <dd className="mt-1 text-sm">{variant.size || '—'}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatPriceWithSeparator(variant.price)}
+                            onChange={(e) =>
+                              updateVariant(
+                                variant.id,
+                                'price',
+                                parsePriceWithSeparator(e.target.value),
+                              )}
+                            placeholder="۰"
+                            className="w-full max-w-xs rounded border px-2 py-2 text-left"
+                          />
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">تخفیف (%)</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={variant.discountPercent ?? ''}
+                            onChange={(e) =>
+                              updateVariant(
+                                variant.id,
+                                'discountPercent',
+                                e.target.value === '' ? undefined : Number(e.target.value),
+                              )}
+                            className="w-full max-w-[8rem] rounded border px-2 py-2"
+                            placeholder="مثلاً 20"
+                          />
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت نهایی</dt>
+                        <dd className="mt-1 text-sm font-medium text-gray-700">
+                          {typeof variant.discountPercent === 'number' &&
+                          variant.discountPercent > 0
+                            ? formatPriceWithSeparator(
+                                Math.round(
+                                  (variant.price * (100 - variant.discountPercent)) / 100,
+                                ),
+                                false,
+                              )
+                            : formatPriceWithSeparator(variant.price, false)}
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">موجودی</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) =>
+                              updateVariant(variant.id, 'stock', Number(e.target.value))
+                            }
+                            className="w-full max-w-[8rem] rounded border px-2 py-2"
+                          />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">مشخصات</dt>
+                        <dd className="mt-2 flex flex-col gap-2">
+                          {selectedSpecs.map((specKey) => {
+                            const specDef = specKeys.find((s) => s.key === specKey);
+                            if (!specDef) return null;
+                            return (
+                              <div key={specKey} className="flex flex-col gap-1 text-sm">
+                                <span className="text-gray-500">{specDef.label}</span>
+                                <input
+                                  type="text"
+                                  value={variant.specifications[specKey] || ''}
+                                  onChange={(e) =>
+                                    updateVariantSpec(variant.id, specKey, e.target.value)
+                                  }
+                                  className="w-full rounded border px-2 py-2"
+                                  placeholder="مقدار..."
+                                />
+                              </div>
+                            );
+                          })}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">

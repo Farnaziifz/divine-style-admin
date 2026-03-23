@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
@@ -77,6 +77,7 @@ const EditProduct = () => {
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]); // Selected Spec Key IDs
+  const skipNextVariantRebuildRef = useRef(false);
   
   useEffect(() => {
     if (id) {
@@ -110,17 +111,21 @@ const EditProduct = () => {
 
       // Populate Variants & Specs
       if (product.variants && product.variants.length > 0) {
+        skipNextVariantRebuildRef.current = true;
         // Extract unique colors and sizes
         const uniqueColors = new Set<string>();
         const uniqueSizes = new Set<string>();
         const uniqueSpecKeys = new Set<string>();
         
         // Base price from first variant if available
-        setBasePrice(product.variants[0].price);
+        setBasePrice(Number(product.variants[0].price) || 0);
 
-        const mappedVariants: Variant[] = product.variants.map(v => {
-          if (v.color) uniqueColors.add(v.color);
-          if (v.size) uniqueSizes.add(v.size);
+        const mappedVariants: Variant[] = product.variants.map((v) => {
+          const color = v.color ?? undefined;
+          const size = v.size ?? undefined;
+
+          if (color) uniqueColors.add(color);
+          if (size) uniqueSizes.add(size);
           if (v.specifications) {
             Object.keys(v.specifications).forEach(k => uniqueSpecKeys.add(k));
           }
@@ -128,11 +133,16 @@ const EditProduct = () => {
           return {
             id: Math.random().toString(36).substr(2, 9),
             sku: v.sku,
-            size: v.size,
-            color: v.color,
-            price: v.price,
-            discountPercent: v.discountPercent,
-            stock: v.stock,
+            size,
+            color,
+            price: Number(v.price) || 0,
+            discountPercent:
+              typeof v.discountPercent === 'number'
+                ? v.discountPercent
+                : v.discountPercent != null
+                  ? Number(v.discountPercent) || undefined
+                  : undefined,
+            stock: Number(v.stock) || 0,
             specifications: v.specifications || {},
           };
         });
@@ -205,6 +215,10 @@ const EditProduct = () => {
 
   useEffect(() => {
     if (isLoading) return; // Don't run this effect while loading initial data
+    if (skipNextVariantRebuildRef.current) {
+      skipNextVariantRebuildRef.current = false;
+      return;
+    }
 
     setVariants((prev) => {
       const newVariants: Variant[] = [];
@@ -670,7 +684,111 @@ const EditProduct = () => {
                     </div>
                 </div>
 
-              <div className="overflow-x-auto">
+              <div className="space-y-3 md:hidden">
+                {variants.map((variant) => (
+                  <article
+                    key={variant.id}
+                    className="space-y-3 rounded-xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/80 p-4 shadow-sm"
+                  >
+                    <dl className="space-y-3">
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">SKU</dt>
+                        <dd className="mt-1 text-sm">{variant.sku}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">رنگ</dt>
+                        <dd className="mt-1 text-sm">{variant.color || '—'}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">سایز</dt>
+                        <dd className="mt-1 text-sm">{variant.size || '—'}</dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="number"
+                            value={variant.price}
+                            onChange={(e) =>
+                              updateVariant(variant.id, 'price', Number(e.target.value))
+                            }
+                            className="w-full max-w-xs rounded border px-2 py-2 text-left"
+                          />
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">تخفیف (%)</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={variant.discountPercent ?? ''}
+                            onChange={(e) =>
+                              updateVariant(
+                                variant.id,
+                                'discountPercent',
+                                e.target.value === '' ? undefined : Number(e.target.value),
+                              )}
+                            className="w-full max-w-[8rem] rounded border px-2 py-2"
+                            placeholder="مثلاً 20"
+                          />
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت نهایی</dt>
+                        <dd className="mt-1 text-sm font-medium text-gray-700">
+                          {typeof variant.discountPercent === 'number' &&
+                          variant.discountPercent > 0
+                            ? (
+                                Math.round(
+                                  ((variant.price * (100 - variant.discountPercent)) / 100) * 100,
+                                ) / 100
+                              ).toLocaleString()
+                            : variant.price.toLocaleString()}
+                        </dd>
+                      </div>
+                      <div className="border-b border-gray-100 pb-3">
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">موجودی</dt>
+                        <dd className="mt-1">
+                          <input
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) =>
+                              updateVariant(variant.id, 'stock', Number(e.target.value))
+                            }
+                            className="w-full max-w-[8rem] rounded border px-2 py-2"
+                          />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-bold uppercase text-gray-500">مشخصات</dt>
+                        <dd className="mt-2 flex flex-col gap-2">
+                          {selectedSpecs.map((specKey) => {
+                            const specDef = specKeys.find((s) => s.key === specKey);
+                            if (!specDef) return null;
+                            return (
+                              <div key={specKey} className="flex flex-col gap-1 text-sm">
+                                <span className="text-gray-500">{specDef.label}</span>
+                                <input
+                                  type="text"
+                                  value={String(variant.specifications[specKey] ?? '')}
+                                  onChange={(e) =>
+                                    updateVariantSpec(variant.id, specKey, e.target.value)
+                                  }
+                                  className="w-full rounded border px-2 py-2"
+                                  placeholder="مقدار..."
+                                />
+                              </div>
+                            );
+                          })}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">

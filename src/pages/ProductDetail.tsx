@@ -160,14 +160,100 @@ const ProductDetail = () => {
                 </p>
               </div>
 
-              {/* Variants Table */}
+              {/* Variants: موبایل کارت / دسکتاپ جدول */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
                   تنوع‌ها و موجودی
                 </h3>
-                <div className="overflow-x-auto border border-gray-200 rounded-xl">
-                  <table className="w-full text-sm text-right">
-                    <thead className="bg-gray-50 text-gray-600 font-medium">
+                <div className="space-y-3 md:hidden">
+                  {product.variants?.map((variant, idx) => (
+                    <article
+                      key={idx}
+                      className="rounded-xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/80 p-4 shadow-sm"
+                    >
+                      <dl className="space-y-3">
+                        <div className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">SKU</dt>
+                          <dd className="mt-1 font-mono text-sm text-gray-700">{variant.sku}</dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">رنگ</dt>
+                          <dd className="mt-1 text-sm">
+                            {variant.color ? (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="h-4 w-4 rounded-full border border-gray-200 shadow-sm"
+                                  style={{ backgroundColor: variant.colorCode || '#eee' }}
+                                />
+                                {variant.color}
+                              </div>
+                            ) : (
+                              '—'
+                            )}
+                          </dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">سایز</dt>
+                          <dd className="mt-1 text-sm">{variant.size || '—'}</dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت</dt>
+                          <dd className="mt-1 text-sm">{variant.price.toLocaleString()} تومان</dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">تخفیف</dt>
+                          <dd className="mt-1 text-sm text-gray-600">
+                            {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
+                              ? `${variant.discountPercent}%`
+                              : '—'}
+                          </dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت نهایی</dt>
+                          <dd className="mt-1 text-sm font-medium">
+                            {(variant.discountPrice ?? variant.price).toLocaleString()} تومان
+                          </dd>
+                        </div>
+                        <div className="border-b border-gray-100 pb-3">
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">موجودی</dt>
+                          <dd className="mt-1">
+                            <span
+                              className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                                variant.stock > 0
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {variant.stock > 0 ? `${variant.stock} عدد` : 'ناموجود'}
+                            </span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-bold uppercase text-gray-500">مشخصات فنی</dt>
+                          <dd className="mt-1 text-sm text-gray-600">
+                            {variant.specifications ? (
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(variant.specifications).map(([key, value]) => (
+                                  <span
+                                    key={key}
+                                    className="rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-xs"
+                                  >
+                                    {key}: {value}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              '—'
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-gray-50 font-medium text-gray-600">
                       <tr>
                         <th className="px-4 py-3">SKU</th>
                         <th className="px-4 py-3">رنگ</th>
@@ -189,7 +275,7 @@ const ProductDetail = () => {
                             {variant.color ? (
                               <div className="flex items-center gap-2">
                                 <span
-                                  className="w-4 h-4 rounded-full border border-gray-200 shadow-sm"
+                                  className="h-4 w-4 rounded-full border border-gray-200 shadow-sm"
                                   style={{ backgroundColor: variant.colorCode || '#eee' }}
                                 />
                                 {variant.color}
@@ -212,7 +298,7 @@ const ProductDetail = () => {
                           </td>
                           <td className="px-4 py-3">
                             <span
-                              className={`px-2 py-1 rounded-md text-xs font-medium ${
+                              className={`rounded-md px-2 py-1 text-xs font-medium ${
                                 variant.stock > 0
                                   ? 'bg-green-50 text-green-700'
                                   : 'bg-red-50 text-red-700'
@@ -228,7 +314,7 @@ const ProductDetail = () => {
                                   ([key, value]) => (
                                     <span
                                       key={key}
-                                      className="px-1.5 py-0.5 bg-gray-100 rounded text-xs border border-gray-200"
+                                      className="rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-xs"
                                     >
                                       {key}: {value}
                                     </span>
