@@ -18,6 +18,7 @@ const permissionOptions: PermissionOption[] = [
   { key: 'DISCOUNTS_WRITE', label: 'مدیریت کدهای تخفیف' },
   { key: 'USERS_MANAGE', label: 'مدیریت کاربران و نقش‌ها' },
   { key: 'SITE_SETTINGS_MANAGE', label: 'تنظیمات سایت' },
+  { key: 'CHAT_MANAGE', label: 'گفتگوها' },
 ];
 
 const normalizePermissions = (p?: string[]) => (Array.isArray(p) ? p : []);

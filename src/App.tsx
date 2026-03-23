@@ -20,6 +20,7 @@ import Orders from './pages/Orders';
 import DiscountCodes from './pages/DiscountCodes';
 import OrderDetail from './pages/OrderDetail';
 import RoleManagement from './pages/RoleManagement';
+import Chats from './pages/Chats';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!localStorage.getItem('accessToken');
@@ -72,6 +73,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
           <Route path="roles" element={<RoleManagement />} />
+          <Route path="direct" element={<Chats />} />
           <Route path="settings">
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />

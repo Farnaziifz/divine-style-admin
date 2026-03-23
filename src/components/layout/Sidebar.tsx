@@ -12,6 +12,7 @@ import {
   TicketPercent,
   LogOut,
   Shield,
+  MessagesSquare,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -66,6 +67,7 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
     ...(canSee('USERS_MANAGE') ? [{ name: 'کاربران', icon: Users, path: '/users' }] : []),
+    ...(canSee('CHAT_MANAGE') ? [{ name: 'گفتگو', icon: MessagesSquare, path: '/direct' }] : []),
     ...(currentRole.role === 'ADMIN'
       ? [{ name: 'مدیریت نقش‌ها', icon: Shield, path: '/roles' }]
       : []),
