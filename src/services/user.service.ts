@@ -7,7 +7,8 @@ export interface UserProfile {
   lastName?: string;
   job?: string;
   nationalCode?: string;
-  role: string;
+  role: 'ADMIN' | 'OPERATOR' | 'USER';
+  permissions?: string[];
   hasPassword?: boolean;
   isProfileComplete?: boolean;
   ordersCount?: number;
@@ -112,6 +113,14 @@ export const userService = {
 
   getUserById: async (id: string): Promise<UserProfile> => {
     const response = await api.get(`/user/${id}`);
+    return response.data;
+  },
+
+  updateUserAccess: async (
+    id: string,
+    data: { role?: UserProfile['role']; permissions?: string[] },
+  ): Promise<UserProfile> => {
+    const response = await api.patch(`/user/${id}/access`, data);
     return response.data;
   },
 };

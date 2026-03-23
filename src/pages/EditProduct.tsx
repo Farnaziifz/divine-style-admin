@@ -60,6 +60,7 @@ const EditProduct = () => {
   const [colors, setColors] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
   const [colorInput, setColorInput] = useState('');
+  const [sizePickerValue, setSizePickerValue] = useState<string>('');
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
   const [newSizeName, setNewSizeName] = useState('');
   const [isAddingSize, setIsAddingSize] = useState(false);
@@ -617,29 +618,28 @@ const EditProduct = () => {
                   سایزها (از لیست انتخاب یا اضافه کنید)
                 </label>
                 <div className="flex gap-2 flex-wrap items-center">
-                  <select
-                    className="px-4 py-2 rounded-xl border border-gray-200 outline-none min-w-[180px] focus:border-zafting-accent"
-                    value=""
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '__add_new__') {
-                        setIsSizeModalOpen(true);
-                        e.target.value = '';
-                        return;
-                      }
-                      if (value) addSizeFromList(value);
-                    }}
-                  >
-                    <option value="">انتخاب سایز...</option>
-                    {sizeOptions
-                      .filter((opt) => !sizes.includes(opt.name))
-                      .map((opt) => (
-                        <option key={opt.id} value={opt.name}>
-                          {opt.name}
-                        </option>
-                      ))}
-                    <option value="__add_new__">➕ افزودن سایز جدید</option>
-                  </select>
+                  <div className="min-w-[220px]">
+                    <Select
+                      options={[
+                        ...sizeOptions
+                          .filter((opt) => !sizes.includes(opt.name))
+                          .map((opt) => ({ label: opt.name, value: opt.name })),
+                        { label: '➕ افزودن سایز جدید', value: '__add_new__' },
+                      ]}
+                      value={sizePickerValue}
+                      onChange={(e) => {
+                        const value = String(e.target.value);
+                        if (value === '__add_new__') {
+                          setIsSizeModalOpen(true);
+                          setSizePickerValue('');
+                          return;
+                        }
+                        if (value) addSizeFromList(value);
+                        setSizePickerValue('');
+                      }}
+                      placeholder="انتخاب سایز..."
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {sizes.map((s) => (

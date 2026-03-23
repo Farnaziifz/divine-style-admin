@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   TicketPercent,
   LogOut,
+  Shield,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -37,22 +38,37 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     onNavigate?.();
   };
 
+  const currentRole = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = raw ? (JSON.parse(raw) as { role?: string; permissions?: string[] }) : null;
+      return {
+        role: parsed?.role ?? null,
+        permissions: Array.isArray(parsed?.permissions) ? parsed?.permissions : [],
+      };
+    } catch {
+      return { role: null, permissions: [] as string[] };
+    }
+  })();
+
+  const canSee = (permission: string) =>
+    currentRole.role === 'ADMIN' ||
+    (currentRole.role === 'OPERATOR' && currentRole.permissions.includes(permission));
+
   const menuItems = [
     { name: 'داشبورد', icon: LayoutDashboard, path: '/' },
-    {
-      name: 'محصولات',
-      icon: Package,
-      path: '/products',
-      children: [
-        { name: 'لیست محصولات', path: '/products' },
-        { name: 'کالکشن‌ها', path: '/products/collections' },
-        { name: 'دسته‌بندی‌ها', path: '/products/categories' },
-        { name: 'مشخصات', path: '/products/specifications' },
-      ],
-    },
-    { name: 'سفارشات', icon: ShoppingBag, path: '/orders' },
-    { name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' },
-    { name: 'کاربران', icon: Users, path: '/users' },
+    ...(canSee('PRODUCTS_WRITE') ? [{ name: 'محصولات', icon: Package, path: '/products', children: [
+      { name: 'لیست محصولات', path: '/products' },
+      { name: 'کالکشن‌ها', path: '/products/collections' },
+      { name: 'دسته‌بندی‌ها', path: '/products/categories' },
+      { name: 'مشخصات', path: '/products/specifications' },
+    ] }] : []),
+    ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
+    ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
+    ...(canSee('USERS_MANAGE') ? [{ name: 'کاربران', icon: Users, path: '/users' }] : []),
+    ...(currentRole.role === 'ADMIN'
+      ? [{ name: 'مدیریت نقش‌ها', icon: Shield, path: '/roles' }]
+      : []),
     {
       name: 'تنظیمات',
       icon: Settings,
@@ -60,6 +76,9 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
       children: [
         { name: 'پروفایل کاربری', path: '/settings/profile' },
         { name: 'امنیت و رمز عبور', path: '/settings/security' },
+        ...(canSee('SITE_SETTINGS_MANAGE')
+          ? [{ name: 'تنظیمات سایت', path: '/settings/site' }]
+          : []),
       ],
     },
   ];

@@ -31,6 +31,10 @@
   --font-persian: "IRANSans", sans-serif;
 }
 
+html {
+  font-size: 15px;
+}
+
 body {
   background-color: var(--color-zafting-bg);
   color: var(--color-zafting-text);

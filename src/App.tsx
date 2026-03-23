@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Otp from './pages/Otp';
 import ProfileSettings from './pages/settings/ProfileSettings';
 import SecuritySettings from './pages/settings/SecuritySettings';
+import SiteSettings from './pages/settings/SiteSettings';
 import Users from './pages/Users';
 import UserDetail from './pages/UserDetail';
 import Collections from './pages/Collections';
@@ -18,10 +19,23 @@ import EditProduct from './pages/EditProduct';
 import Orders from './pages/Orders';
 import DiscountCodes from './pages/DiscountCodes';
 import OrderDetail from './pages/OrderDetail';
+import RoleManagement from './pages/RoleManagement';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!localStorage.getItem('accessToken');
   if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  try {
+    const raw = localStorage.getItem('user');
+    const parsed = raw ? (JSON.parse(raw) as { role?: string }) : null;
+    const role = parsed?.role;
+    if (role !== 'ADMIN' && role !== 'OPERATOR') {
+      localStorage.clear();
+      return <Navigate to="/login" replace />;
+    }
+  } catch {
+    localStorage.clear();
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
@@ -57,10 +71,12 @@ function App() {
           <Route path="discount-codes" element={<DiscountCodes />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
+          <Route path="roles" element={<RoleManagement />} />
           <Route path="settings">
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileSettings />} />
             <Route path="security" element={<SecuritySettings />} />
+            <Route path="site" element={<SiteSettings />} />
           </Route>
         </Route>
       </Routes>
