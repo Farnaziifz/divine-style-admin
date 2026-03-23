@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin } from 'lucide-react';
+import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin, Truck } from 'lucide-react';
 import { orderService, type OrderComment, type OrderDetails } from '../services/order.service';
 import { getImageUrl } from '../utils/image';
 import { Select } from '../components/common/Select';
@@ -484,6 +484,27 @@ const OrderDetail = () => {
               {order.discountCode ? (
                 <div className="pt-2 text-xs text-gray-500">کد تخفیف: {order.discountCode}</div>
               ) : null}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 text-gray-700 mb-4">
+              <Truck size={18} />
+              <h2 className="font-bold">روش ارسال</h2>
+            </div>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div className="flex justify-between">
+                <span>عنوان</span>
+                <span>{order.shippingMethodTitle || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>هزینه</span>
+                <span>
+                  {typeof order.shippingMethodPrice === 'number'
+                    ? `${order.shippingMethodPrice.toLocaleString('fa-IR')} تومان`
+                    : '—'}
+                </span>
+              </div>
             </div>
           </div>
 

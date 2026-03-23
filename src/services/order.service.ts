@@ -16,6 +16,9 @@ export interface Order {
   discountCode?: string | null;
   discountAmount?: number;
   shippingCost?: number;
+  shippingMethodId?: string | null;
+  shippingMethodTitle?: string | null;
+  shippingMethodPrice?: number | null;
   payableAmount?: number;
   userId: string;
   user?: OrderUser;
