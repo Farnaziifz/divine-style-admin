@@ -1,44 +1,89 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { userService, type UserProfile } from '../services/user.service';
+import { orderService, type Order } from '../services/order.service';
+import {
+  paymentTransactionService,
+  type PaymentTransaction,
+} from '../services/paymentTransaction.service';
 import { Tabs } from '../components/common/Tabs';
-import { Table } from '../components/common/Table';
+import { Table, type Column } from '../components/common/Table';
+import { OrderDetailsModal } from '../components/features/OrderDetailsModal';
 import {
   ArrowRight,
   User,
   ShoppingBag,
   CreditCard,
-  MessageSquare,
-  Heart,
   Loader2,
 } from 'lucide-react';
 
-// Mock Data
-const mockOrders = [
-  { id: 'ORD-1001', date: '1402/12/01', total: '12,500,000', status: 'تکمیل شده', items: 3 },
-  { id: 'ORD-1002', date: '1402/11/15', total: '8,200,000', status: 'لغو شده', items: 1 },
-];
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('fa-IR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+};
 
-const mockPayments = [
-  { id: 'PAY-5001', date: '1402/12/01', amount: '12,500,000', method: 'درگاه زرین‌پال', status: 'موفق' },
-  { id: 'PAY-5002', date: '1402/11/15', amount: '8,200,000', method: 'کارت به کارت', status: 'ناموفق' },
-];
+const statusBadge = (status?: Order['orderStatus']) => {
+  if (status === 'DELIVERED') return 'bg-green-100 text-green-700 border-green-200';
+  if (status === 'CANCELED') return 'bg-red-100 text-red-700 border-red-200';
+  if (status === 'SHIPPED') return 'bg-blue-100 text-blue-700 border-blue-200';
+  if (status === 'CONFIRMED') return 'bg-purple-100 text-purple-700 border-purple-200';
+  if (status === 'PAID') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  return 'bg-amber-100 text-amber-700 border-amber-200';
+};
 
-const mockComments = [
-  { id: 'CMT-1', product: 'مانتو کتان کرم', content: 'کیفیت دوخت عالی بود، ممنون.', date: '1402/12/05', status: 'تایید شده' },
-  { id: 'CMT-2', product: 'شلوار جین راسته', content: 'سایزش کمی بزرگ بود.', date: '1402/11/20', status: 'در انتظار بررسی' },
-];
+const statusLabel = (status?: Order['orderStatus']) => {
+  if (status === 'PENDING_PAYMENT') return 'در انتظار پرداخت';
+  if (status === 'PAID') return 'پرداخت شده';
+  if (status === 'CONFIRMED') return 'تایید شده';
+  if (status === 'SHIPPED') return 'ارسال شده';
+  if (status === 'DELIVERED') return 'دریافت شده';
+  if (status === 'CANCELED') return 'لغو شده';
+  return 'در انتظار پرداخت';
+};
 
-const mockWishlist = [
-  { id: 'PRD-1', title: 'شومیز مجلسی سفید', price: '1,800,000', addedAt: '1402/10/01' },
-  { id: 'PRD-2', title: 'کت چرم مشکی', price: '4,500,000', addedAt: '1402/10/15' },
-];
+const formatPrice = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+  return new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
+};
+
+const paymentProviderLabel = (provider?: string) => {
+  if (provider === 'ZARINPAL') return 'زرین‌پال';
+  return provider || '-';
+};
+
+const paymentStatusLabel = (status?: PaymentTransaction['status']) => {
+  if (status === 'PAID') return 'موفق';
+  if (status === 'FAILED') return 'ناموفق';
+  if (status === 'INITIATED') return 'در انتظار';
+  return status || '—';
+};
+
+const paymentStatusBadge = (status?: PaymentTransaction['status']) => {
+  if (status === 'PAID') return 'bg-green-100 text-green-700 border-green-200';
+  if (status === 'FAILED') return 'bg-red-100 text-red-700 border-red-200';
+  return 'bg-amber-100 text-amber-700 border-amber-200';
+};
 
 const UserDetail = () => {
   const { id } = useParams();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('orders');
+  
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotal, setOrdersTotal] = useState(0);
+  const [selectedOrderCode, setSelectedOrderCode] = useState<string | null>(null);
+
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentsTotal, setPaymentsTotal] = useState(0);
 
   useEffect(() => {
     if (id) fetchUser(id);
@@ -54,6 +99,148 @@ const UserDetail = () => {
       setIsLoading(false);
     }
   };
+
+  const fetchOrders = useCallback(async () => {
+    if (!id) return;
+    setOrdersLoading(true);
+    try {
+      const response = await orderService.getAll({
+        page: ordersPage,
+        limit: 10,
+        userId: id,
+      });
+      setOrders(response.data);
+      setOrdersTotal(response.meta.total);
+    } catch (error) {
+      console.error('Failed to fetch orders', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [id, ordersPage]);
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab, fetchOrders]);
+
+  const fetchPayments = useCallback(async () => {
+    if (!id) return;
+    setPaymentsLoading(true);
+    try {
+      const response = await paymentTransactionService.getAll({
+        page: paymentsPage,
+        limit: 10,
+        userId: id,
+      });
+      setPayments(response.data);
+      setPaymentsTotal(response.meta.total);
+    } catch (error) {
+      console.error('Failed to fetch payments', error);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [id, paymentsPage]);
+
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      fetchPayments();
+    }
+  }, [activeTab, fetchPayments]);
+
+  const orderColumns: Column<Order>[] = useMemo(
+    () => [
+      {
+        key: 'orderCode',
+        title: 'کد سفارش',
+        render: (order) => <span className="font-mono text-gray-700">{order.orderCode}</span>,
+      },
+      {
+        key: 'createdAt',
+        title: 'تاریخ',
+        render: (order) => formatDateTime(order.createdAt),
+      },
+      {
+        key: 'payableAmount',
+        title: 'مبلغ کل',
+        render: (order) => formatPrice(order.payableAmount),
+      },
+      {
+        key: 'orderStatus',
+        title: 'وضعیت',
+        render: (order) => (
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${statusBadge(order.orderStatus)}`}
+          >
+            {statusLabel(order.orderStatus)}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        title: 'عملیات',
+        render: (order) => (
+          <button
+            onClick={() => setSelectedOrderCode(order.orderCode)}
+            className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-700"
+          >
+            جزئیات
+          </button>
+        ),
+      },
+    ],
+    []
+  );
+
+  const paymentColumns: Column<PaymentTransaction>[] = useMemo(
+    () => [
+      {
+        key: 'orderCode',
+        title: 'کد سفارش',
+        render: (tx) => (
+          <span className="font-mono text-gray-700">
+            {tx.order?.orderCode || '—'}
+          </span>
+        ),
+      },
+      {
+        key: 'createdAt',
+        title: 'تاریخ',
+        render: (tx) => formatDateTime(tx.createdAt),
+      },
+      {
+        key: 'amount',
+        title: 'مبلغ (تومان)',
+        render: (tx) => formatPrice(tx.amount),
+      },
+      {
+        key: 'provider',
+        title: 'درگاه',
+        render: (tx) => paymentProviderLabel(tx.provider),
+      },
+      {
+        key: 'status',
+        title: 'وضعیت',
+        render: (tx) => (
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${paymentStatusBadge(
+              tx.status,
+            )}`}
+          >
+            {paymentStatusLabel(tx.status)}
+          </span>
+        ),
+      },
+      {
+        key: 'refId',
+        title: 'RefID',
+        render: (tx) => (
+          <span className="font-mono text-gray-700">{tx.refId || '—'}</span>
+        ),
+      },
+    ],
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -77,17 +264,21 @@ const UserDetail = () => {
       id: 'orders',
       label: 'سفارشات',
       icon: <ShoppingBag size={18} />,
-      content: (
+      content: ordersLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin text-[#6B5B54]" size={32} />
+        </div>
+      ) : (
         <Table
-          columns={[
-            { key: 'id', title: 'شماره سفارش' },
-            { key: 'date', title: 'تاریخ' },
-            { key: 'items', title: 'تعداد اقلام' },
-            { key: 'total', title: 'مبلغ کل (تومان)' },
-            { key: 'status', title: 'وضعیت' },
-          ]}
-          data={mockOrders}
+          columns={orderColumns}
+          data={orders}
           emptyMessage="سفارشی یافت نشد"
+          pagination={{
+            page: ordersPage,
+            limit: 10,
+            total: ordersTotal,
+            onPageChange: setOrdersPage,
+          }}
         />
       ),
     },
@@ -95,50 +286,21 @@ const UserDetail = () => {
       id: 'payments',
       label: 'تراکنش‌ها',
       icon: <CreditCard size={18} />,
-      content: (
+      content: paymentsLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin text-[#6B5B54]" size={32} />
+        </div>
+      ) : (
         <Table
-          columns={[
-            { key: 'id', title: 'شماره تراکنش' },
-            { key: 'date', title: 'تاریخ' },
-            { key: 'amount', title: 'مبلغ (تومان)' },
-            { key: 'method', title: 'روش پرداخت' },
-            { key: 'status', title: 'وضعیت' },
-          ]}
-          data={mockPayments}
+          columns={paymentColumns}
+          data={payments}
           emptyMessage="تراکنشی یافت نشد"
-        />
-      ),
-    },
-    {
-      id: 'comments',
-      label: 'دیدگاه‌ها',
-      icon: <MessageSquare size={18} />,
-      content: (
-        <Table
-          columns={[
-            { key: 'product', title: 'محصول' },
-            { key: 'content', title: 'متن دیدگاه' },
-            { key: 'date', title: 'تاریخ' },
-            { key: 'status', title: 'وضعیت' },
-          ]}
-          data={mockComments}
-          emptyMessage="دیدگاهی یافت نشد"
-        />
-      ),
-    },
-    {
-      id: 'wishlist',
-      label: 'علاقمندی‌ها',
-      icon: <Heart size={18} />,
-      content: (
-        <Table
-          columns={[
-            { key: 'title', title: 'محصول' },
-            { key: 'price', title: 'قیمت (تومان)' },
-            { key: 'addedAt', title: 'تاریخ افزودن' },
-          ]}
-          data={mockWishlist}
-          emptyMessage="لیست علاقمندی خالی است"
+          pagination={{
+            page: paymentsPage,
+            limit: 10,
+            total: paymentsTotal,
+            onPageChange: setPaymentsPage,
+          }}
         />
       ),
     },
@@ -185,6 +347,16 @@ const UserDetail = () => {
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
+
+      {selectedOrderCode && (
+        <OrderDetailsModal
+          orderCode={selectedOrderCode}
+          onClose={() => {
+            setSelectedOrderCode(null);
+            fetchOrders(); // Refresh orders list in case status changed
+          }}
+        />
+      )}
     </div>
   );
 };

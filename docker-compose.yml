@@ -1,0 +1,10 @@
+services:
+  divine-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://193.105.234.86:3005
+    ports:
+      - "5173:80"
+

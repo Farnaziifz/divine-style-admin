@@ -13,6 +13,7 @@ import {
   LogOut,
   Shield,
   MessagesSquare,
+  BookOpenText,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -68,6 +69,19 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
     ...(canSee('USERS_MANAGE') ? [{ name: 'کاربران', icon: Users, path: '/users' }] : []),
     ...(canSee('CHAT_MANAGE') ? [{ name: 'گفتگو', icon: MessagesSquare, path: '/direct' }] : []),
+    ...(canSee('BLOG_MANAGE')
+      ? [
+          {
+            name: 'مجله مد',
+            icon: BookOpenText,
+            path: '/blog',
+            children: [
+              { name: 'پست‌ها', path: '/blog/posts' },
+              { name: 'دسته‌بندی‌ها', path: '/blog/categories' },
+            ],
+          },
+        ]
+      : []),
     ...(currentRole.role === 'ADMIN'
       ? [{ name: 'مدیریت نقش‌ها', icon: Shield, path: '/roles' }]
       : []),

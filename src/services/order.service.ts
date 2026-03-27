@@ -79,7 +79,7 @@ export interface PaginatedResponse<T> {
 }
 
 export const orderService = {
-  getAll: async (params?: { page?: number; limit?: number; q?: string }) => {
+  getAll: async (params?: { page?: number; limit?: number; q?: string; userId?: string }) => {
     const response = await api.get<PaginatedResponse<Order>>('/orders', {
       params,
     });
