@@ -33,6 +33,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   try {
     const raw = localStorage.getItem('user');
     const parsed = raw ? (JSON.parse(raw) as { role?: string }) : null;
+    // فقط مدیر / اپراتور؛ نقش USER باعث می‌شد بعد از ورود توکن‌ها پاک به نظر برسند
     const role = parsed?.role;
     if (role !== 'ADMIN' && role !== 'OPERATOR') {
       localStorage.clear();

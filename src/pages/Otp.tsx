@@ -7,6 +7,11 @@ import { authService } from '../services/auth.service';
 import loginBg from '../assets/images/login.jpg';
 import logo from '../assets/images/logo.svg';
 
+function canAccessAdminPanel(user: { role?: string | null } | undefined) {
+  const r = user?.role;
+  return r === 'ADMIN' || r === 'OPERATOR';
+}
+
 const Otp = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,10 +67,17 @@ const Otp = () => {
         response = await authService.login(phoneNumber, password);
       }
 
+      if (!canAccessAdminPanel(response.user)) {
+        setError(
+          'دسترسی به پنل مدیریت فقط برای حساب‌های مدیر یا اپراتور است. لطفاً با حساب مجاز وارد شوید.',
+        );
+        return;
+      }
+
       localStorage.setItem('accessToken', response.accessToken);
       localStorage.setItem('refreshToken', response.refreshToken);
       localStorage.setItem('user', JSON.stringify(response.user));
-      
+
       navigate('/');
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
