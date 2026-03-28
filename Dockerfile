@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM mirror2.chabokan.net/node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -15,7 +15,7 @@ COPY public ./public
 COPY src ./src
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM mirror2.chabokan.net/nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
