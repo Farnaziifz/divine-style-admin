@@ -1,7 +1,22 @@
 import axios from 'axios';
 
+function normalizeBaseUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('VITE_API_URL is required');
+  }
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`;
+  return withProtocol.replace(/\/+$/, '');
+}
+
+const API_BASE_URL = normalizeBaseUrl(
+  (import.meta.env.VITE_API_URL as string | undefined) ?? '',
+);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3005',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -38,7 +53,7 @@ api.interceptors.response.use(
 
         // Call refresh endpoint
         const response = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/auth/refresh`,
+          `${API_BASE_URL}/auth/refresh`,
           {},
           {
             headers: {

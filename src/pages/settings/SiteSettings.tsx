@@ -7,6 +7,7 @@ import {
   shippingMethodService,
   type ShippingMethod,
 } from '../../services/shippingMethod.service';
+import api from '../../services/api';
 
 const tabs = [
   { key: 'shipping', label: 'تنظیمات ارسال', icon: Truck },
@@ -67,6 +68,13 @@ const SiteSettings = () => {
   const [editTarget, setEditTarget] = useState<ShippingMethod | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  const [otpProvider, setOtpProvider] = useState<'ussdpanel' | 'sms_ir'>(
+    'ussdpanel',
+  );
+  const [otpProviderLoading, setOtpProviderLoading] = useState(false);
+  const [otpProviderSaving, setOtpProviderSaving] = useState(false);
+  const [otpProviderError, setOtpProviderError] = useState<string | null>(null);
+
   const fetchShippingMethods = useCallback(async () => {
     setShippingLoading(true);
     setShippingError(null);
@@ -81,11 +89,33 @@ const SiteSettings = () => {
     }
   }, []);
 
+  const fetchOtpProvider = useCallback(async () => {
+    setOtpProviderLoading(true);
+    setOtpProviderError(null);
+    try {
+      const { data } = await api.get<{
+        provider: 'ussdpanel' | 'sms_ir';
+        options: Array<'ussdpanel' | 'sms_ir'>;
+      }>('/site-settings/otp-provider');
+      setOtpProvider(data.provider);
+    } catch {
+      setOtpProviderError('خطا در دریافت تنظیمات سرویس OTP');
+    } finally {
+      setOtpProviderLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!canManageSiteSettings(auth)) return;
     if (activeTab !== 'shipping') return;
     fetchShippingMethods();
   }, [activeTab, auth, fetchShippingMethods]);
+
+  useEffect(() => {
+    if (!canManageSiteSettings(auth)) return;
+    if (activeTab !== 'general') return;
+    fetchOtpProvider();
+  }, [activeTab, auth, fetchOtpProvider]);
 
   if (!canManageSiteSettings(auth)) {
     return (
@@ -259,8 +289,73 @@ const SiteSettings = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold text-[#2A2A2A]">عمومی</h2>
           <p className="text-sm text-gray-500 mt-2">
-            این بخش هم در پیام بعدی طبق نیاز شما تکمیل می‌شود.
+            تنظیمات عمومی سایت و سرویس‌های مورد استفاده.
           </p>
+
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-[#2A2A2A]">سرویس ارسال OTP</h3>
+                <p className="text-sm text-gray-600 mt-2 leading-7">
+                  سرویس پیش‌فرض: USSD Panel (ارسال OTP با پیامک خدماتی). امکان سوییچ به
+                  sms.ir هم وجود دارد.
+                </p>
+              </div>
+            </div>
+
+            {otpProviderError ? (
+              <div className="mt-4 text-sm text-red-600">{otpProviderError}</div>
+            ) : null}
+
+            {otpProviderLoading ? (
+              <div className="mt-6 flex items-center text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span className="ms-2 text-sm">در حال دریافت...</span>
+              </div>
+            ) : (
+              <div className="mt-6 flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    انتخاب سرویس
+                  </label>
+                  <select
+                    value={otpProvider}
+                    onChange={(e) =>
+                      setOtpProvider(e.target.value as 'ussdpanel' | 'sms_ir')
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent bg-white"
+                  >
+                    <option value="ussdpanel">USSD Panel (پیش‌فرض)</option>
+                    <option value="sms_ir">sms.ir</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={otpProviderSaving}
+                  onClick={async () => {
+                    setOtpProviderSaving(true);
+                    setOtpProviderError(null);
+                    try {
+                      await api.patch('/site-settings/otp-provider', {
+                        provider: otpProvider,
+                      });
+                    } catch {
+                      setOtpProviderError('خطا در ذخیره تنظیمات سرویس OTP');
+                    } finally {
+                      setOtpProviderSaving(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {otpProviderSaving ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : null}
+                  ذخیره
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
