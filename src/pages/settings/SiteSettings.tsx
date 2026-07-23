@@ -75,6 +75,18 @@ const SiteSettings = () => {
   const [otpProviderSaving, setOtpProviderSaving] = useState(false);
   const [otpProviderError, setOtpProviderError] = useState<string | null>(null);
 
+  const [paymentActiveProviders, setPaymentActiveProviders] = useState<
+    Array<'ZARINPAL' | 'ZIBAL'>
+  >(['ZARINPAL']);
+  const [paymentDefaultProvider, setPaymentDefaultProvider] = useState<
+    'ZARINPAL' | 'ZIBAL'
+  >('ZARINPAL');
+  const [paymentProvidersLoading, setPaymentProvidersLoading] = useState(false);
+  const [paymentProvidersSaving, setPaymentProvidersSaving] = useState(false);
+  const [paymentProvidersError, setPaymentProvidersError] = useState<string | null>(
+    null,
+  );
+
   const fetchShippingMethods = useCallback(async () => {
     setShippingLoading(true);
     setShippingError(null);
@@ -105,6 +117,24 @@ const SiteSettings = () => {
     }
   }, []);
 
+  const fetchPaymentProviders = useCallback(async () => {
+    setPaymentProvidersLoading(true);
+    setPaymentProvidersError(null);
+    try {
+      const { data } = await api.get<{
+        options: Array<'ZARINPAL' | 'ZIBAL'>;
+        activeProviders: Array<'ZARINPAL' | 'ZIBAL'>;
+        defaultProvider: 'ZARINPAL' | 'ZIBAL';
+      }>('/site-settings/payment-providers');
+      setPaymentActiveProviders(data.activeProviders);
+      setPaymentDefaultProvider(data.defaultProvider);
+    } catch {
+      setPaymentProvidersError('خطا در دریافت تنظیمات درگاه‌های پرداخت');
+    } finally {
+      setPaymentProvidersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!canManageSiteSettings(auth)) return;
     if (activeTab !== 'shipping') return;
@@ -115,7 +145,8 @@ const SiteSettings = () => {
     if (!canManageSiteSettings(auth)) return;
     if (activeTab !== 'general') return;
     fetchOtpProvider();
-  }, [activeTab, auth, fetchOtpProvider]);
+    fetchPaymentProviders();
+  }, [activeTab, auth, fetchOtpProvider, fetchPaymentProviders]);
 
   if (!canManageSiteSettings(auth)) {
     return (
@@ -356,8 +387,128 @@ const SiteSettings = () => {
               </div>
             )}
           </div>
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-[#2A2A2A]">درگاه پرداخت</h3>
+                <p className="text-sm text-gray-600 mt-2 leading-7">
+                  درگاه‌های فعال را انتخاب کنید و یک درگاه را به عنوان پیش‌فرض تعیین
+                  کنید.
+                </p>
+              </div>
+            </div>
+
+            {paymentProvidersError ? (
+              <div className="mt-4 text-sm text-red-600">
+                {paymentProvidersError}
+              </div>
+            ) : null}
+
+            {paymentProvidersLoading ? (
+              <div className="mt-6 flex items-center text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span className="ms-2 text-sm">در حال دریافت...</span>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {([
+                    { key: 'ZARINPAL', label: 'زرین‌پال' },
+                    { key: 'ZIBAL', label: 'زیبال' },
+                  ] as const).map((p) => {
+                    const isActive = paymentActiveProviders.includes(p.key);
+                    const isDefault = paymentDefaultProvider === p.key;
+                    const disableUncheck =
+                      isActive && paymentActiveProviders.length === 1;
+                    return (
+                      <div
+                        key={p.key}
+                        className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isActive}
+                            disabled={paymentProvidersSaving || disableUncheck}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setPaymentActiveProviders((prev) => {
+                                const next = checked
+                                  ? Array.from(new Set([...prev, p.key]))
+                                  : prev.filter((x) => x !== p.key);
+                                if (next.length === 0) return prev;
+                                return next;
+                              });
+                              if (!checked && isDefault) {
+                                setPaymentDefaultProvider('ZARINPAL');
+                              }
+                              if (checked && !isActive) {
+                                setPaymentDefaultProvider((prev) =>
+                                  prev ? prev : p.key,
+                                );
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm font-medium text-gray-800">
+                            {p.label}
+                          </span>
+                        </div>
+
+                        <label className="flex items-center gap-2 text-sm text-gray-600">
+                          <input
+                            type="radio"
+                            name="paymentDefaultProvider"
+                            checked={isDefault}
+                            disabled={!isActive || paymentProvidersSaving}
+                            onChange={() => setPaymentDefaultProvider(p.key)}
+                          />
+                          پیش‌فرض
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={paymentProvidersSaving || paymentActiveProviders.length === 0}
+                  onClick={async () => {
+                    setPaymentProvidersSaving(true);
+                    setPaymentProvidersError(null);
+                    try {
+                      const active = paymentActiveProviders.length
+                        ? paymentActiveProviders
+                        : (['ZARINPAL'] as Array<'ZARINPAL' | 'ZIBAL'>);
+                      const defaultProvider = active.includes(paymentDefaultProvider)
+                        ? paymentDefaultProvider
+                        : active[0];
+                      await api.patch('/site-settings/payment-providers', {
+                        activeProviders: active,
+                        defaultProvider,
+                      });
+                      setPaymentActiveProviders(active);
+                      setPaymentDefaultProvider(defaultProvider);
+                    } catch {
+                      setPaymentProvidersError('خطا در ذخیره تنظیمات درگاه‌های پرداخت');
+                    } finally {
+                      setPaymentProvidersSaving(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {paymentProvidersSaving ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : null}
+                  ذخیره
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
       )}
+
 
       <Modal
         isOpen={isAddShippingOpen}

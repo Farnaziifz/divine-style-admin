@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Table, type Column } from '../components/common/Table';
 import { orderService, type Order } from '../services/order.service';
+import {
+  paymentTransactionService,
+  type PaymentTransaction,
+} from '../services/paymentTransaction.service';
 import { Loader2 } from 'lucide-react';
 import { SearchInput } from '../components/common/SearchInput';
 import { toEnglishDigits } from '../utils/digits';
 import { Link } from 'react-router-dom';
+import { Tabs } from '../components/common/Tabs';
 
 const formatDateTime = (value: string) => {
   const date = new Date(value);
@@ -59,13 +64,38 @@ const statusLabel = (status?: Order['orderStatus']) => {
   return 'در انتظار پرداخت';
 };
 
+const formatPrice = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+  return new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
+};
+
+const paymentStatusLabel = (status?: PaymentTransaction['status']) => {
+  if (status === 'PAID') return 'موفق';
+  if (status === 'FAILED') return 'ناموفق';
+  if (status === 'INITIATED') return 'در انتظار';
+  return status || '—';
+};
+
+const paymentStatusBadge = (status?: PaymentTransaction['status']) => {
+  if (status === 'PAID') return 'bg-green-100 text-green-700 border-green-200';
+  if (status === 'FAILED') return 'bg-red-100 text-red-700 border-red-200';
+  return 'bg-amber-100 text-amber-700 border-amber-200';
+};
+
 const Orders = () => {
+  const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders');
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentsTotal, setPaymentsTotal] = useState(0);
 
   const normalizedQuery = useMemo(() => {
     return toEnglishDigits(searchQuery.trim()).toLowerCase();
@@ -89,8 +119,32 @@ const Orders = () => {
   }, [limit, normalizedQuery, page]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab, fetchOrders]);
+
+  const fetchPayments = useCallback(async () => {
+    setPaymentsLoading(true);
+    try {
+      const response = await paymentTransactionService.getAll({
+        page: paymentsPage,
+        limit,
+      });
+      setPayments(response.data);
+      setPaymentsTotal(response.meta.total);
+    } catch (error) {
+      console.error('Failed to fetch payments', error);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [limit, paymentsPage]);
+
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      fetchPayments();
+    }
+  }, [activeTab, fetchPayments]);
 
   const columns: Column<Order>[] = useMemo(
     () => [
@@ -143,44 +197,142 @@ const Orders = () => {
     [normalizedQuery]
   );
 
+  const paymentColumns: Column<PaymentTransaction>[] = useMemo(
+    () => [
+      {
+        key: 'orderCode',
+        title: 'کد سفارش',
+        render: (tx) =>
+          tx.order?.orderCode ? (
+            <Link
+              to={`/orders/${encodeURIComponent(tx.order.orderCode)}`}
+              className="font-mono text-gray-700 underline underline-offset-2 hover:text-zafting-accent"
+            >
+              {tx.order.orderCode}
+            </Link>
+          ) : (
+            <span className="font-mono text-gray-700">—</span>
+          ),
+      },
+      {
+        key: 'createdAt',
+        title: 'تاریخ',
+        render: (tx) => formatDateTime(tx.createdAt),
+      },
+      {
+        key: 'amount',
+        title: 'مبلغ',
+        render: (tx) => formatPrice(tx.amount),
+      },
+      {
+        key: 'status',
+        title: 'وضعیت',
+        render: (tx) => (
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${paymentStatusBadge(
+              tx.status,
+            )}`}
+          >
+            {paymentStatusLabel(tx.status)}
+          </span>
+        ),
+      },
+      {
+        key: 'refId',
+        title: 'RefID',
+        render: (tx) => (
+          <span className="font-mono text-gray-700">{tx.refId || '—'}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#2A2A2A]">مدیریت سفارشات</h1>
         <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm whitespace-nowrap">
-          تعداد کل: <span className="font-bold text-[#2A2A2A]">{total}</span>
+          تعداد کل:{' '}
+          <span className="font-bold text-[#2A2A2A]">
+            {activeTab === 'orders' ? total : paymentsTotal}
+          </span>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
-        <div className="flex-1">
-          <SearchInput
-            onSearch={(value) => {
-              setSearchQuery(value);
-              setPage(1);
-            }}
-            placeholder="جستجو بر اساس کد سفارش (مثلاً 123456)"
-          />
-        </div>
-      </div>
+      <Tabs
+        tabs={[
+          {
+            id: 'orders',
+            label: 'سفارش‌ها',
+            content: (
+              <>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+                  <div className="flex-1">
+                    <SearchInput
+                      onSearch={(value) => {
+                        setSearchQuery(value);
+                        setPage(1);
+                      }}
+                      placeholder="جستجو بر اساس کد سفارش (مثلاً 123456)"
+                    />
+                  </div>
+                </div>
 
-      {isLoading ? (
-        <div className="p-8 flex justify-center bg-white rounded-xl shadow-sm border border-gray-100">
-          <Loader2 className="animate-spin text-zafting-accent" size={32} />
-        </div>
-      ) : (
-        <Table
-          columns={columns}
-          data={orders}
-          emptyMessage="سفارشی یافت نشد"
-          pagination={{
-            page,
-            limit,
-            total,
-            onPageChange: (p) => setPage(p),
-          }}
-        />
-      )}
+                {isLoading ? (
+                  <div className="p-8 flex justify-center bg-white rounded-xl shadow-sm border border-gray-100">
+                    <Loader2
+                      className="animate-spin text-zafting-accent"
+                      size={32}
+                    />
+                  </div>
+                ) : (
+                  <Table
+                    columns={columns}
+                    data={orders}
+                    emptyMessage="سفارشی یافت نشد"
+                    pagination={{
+                      page,
+                      limit,
+                      total,
+                      onPageChange: (p) => setPage(p),
+                    }}
+                  />
+                )}
+              </>
+            ),
+          },
+          {
+            id: 'payments',
+            label: 'پرداخت‌ها',
+            content: paymentsLoading ? (
+              <div className="p-8 flex justify-center bg-white rounded-xl shadow-sm border border-gray-100">
+                <Loader2
+                  className="animate-spin text-zafting-accent"
+                  size={32}
+                />
+              </div>
+            ) : (
+              <Table
+                columns={paymentColumns}
+                data={payments}
+                emptyMessage="پرداختی یافت نشد"
+                pagination={{
+                  page: paymentsPage,
+                  limit,
+                  total: paymentsTotal,
+                  onPageChange: (p) => setPaymentsPage(p),
+                }}
+              />
+            ),
+          },
+        ]}
+        activeTab={activeTab}
+        onTabChange={(tabId) => {
+          if (tabId === 'orders') setActiveTab('orders');
+          if (tabId === 'payments') setActiveTab('payments');
+        }}
+      />
     </div>
   );
 };
