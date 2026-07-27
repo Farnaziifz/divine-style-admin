@@ -59,13 +59,12 @@ const ProductList = () => {
   const formatPrice = (value: number) =>
     value.toLocaleString('fa-IR', { maximumFractionDigits: 0 });
 
-  const getBasePrice = (item: Product): number | null => {
-    if (!item.variants?.length) return null;
-    const prices = item.variants.map((v) => Number(v.price));
-    return Math.min(...prices);
-  };
-
   const columns: Column<Product>[] = [
+    {
+      key: 'code',
+      title: 'کد محصول',
+      render: (item) => <span className="font-mono text-sm">{item.code}</span>,
+    },
     {
       key: 'image',
       title: 'تصویر',
@@ -111,13 +110,11 @@ const ProductList = () => {
       render: (item) => item.collections?.[0]?.title || 'نامشخص',
     },
     {
-      key: 'basePrice',
-      title: 'قیمت پایه (تومان)',
-      render: (item) => {
-        const price = getBasePrice(item);
-        if (price == null) return <span className="text-gray-400">—</span>;
-        return <span className="font-medium">{formatPrice(price)}</span>;
-      },
+      key: 'finalPrice',
+      title: 'قیمت نهایی (تومان)',
+      render: (item) => (
+        <span className="font-medium">{formatPrice(Number(item.finalPrice))}</span>
+      ),
     },
     {
       key: 'actions',

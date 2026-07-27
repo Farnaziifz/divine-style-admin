@@ -9,6 +9,12 @@ export interface Category {
   parentId?: string;
   children?: Category[];
   createdAt: string;
+  /** شروع بازهٔ کد محصولات این دسته‌بندی (مثلاً ۲۰۰) */
+  codeStart: number;
+  /** کد بعدی که به محصول جدید این دسته‌بندی داده می‌شود */
+  nextCode: number;
+  /** ضریب سود این دسته‌بندی برای فرمول قیمت‌گذاری */
+  profitMultiplier: number;
 }
 
 export interface PaginatedResponse<T> {

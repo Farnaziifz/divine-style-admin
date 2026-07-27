@@ -138,6 +138,9 @@ const ProductDetail = () => {
                   {product.title}
                 </h1>
                 <div className="flex flex-wrap gap-2 text-sm">
+                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full font-mono">
+                    کد محصول: {product.code}
+                  </span>
                   {product.category && (
                     <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">
                       دسته‌بندی: {product.category.title}
@@ -149,6 +152,35 @@ const ProductDetail = () => {
                     </span>
                   )}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">بهای تمام‌شده خالص</p>
+                  <p className="mt-1 font-bold text-gray-800">
+                    {Number(product.costPrice).toLocaleString()} تومان
+                  </p>
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">قیمت نهایی</p>
+                  <p className="mt-1 font-bold text-gray-800">
+                    {Number(product.finalPrice).toLocaleString()} تومان
+                  </p>
+                </div>
+                {typeof product.discountPercent === 'number' && product.discountPercent > 0 && (
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-500">تخفیف دستی</p>
+                    <p className="mt-1 font-bold text-gray-800">{product.discountPercent}٪</p>
+                  </div>
+                )}
+                {product.discountPrice != null && (
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-500">قیمت با تخفیف</p>
+                    <p className="mt-1 font-bold text-gray-800">
+                      {Number(product.discountPrice).toLocaleString()} تومان
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -197,24 +229,6 @@ const ProductDetail = () => {
                           <dd className="mt-1 text-sm">{variant.size || '—'}</dd>
                         </div>
                         <div className="border-b border-gray-100 pb-3">
-                          <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت</dt>
-                          <dd className="mt-1 text-sm">{variant.price.toLocaleString()} تومان</dd>
-                        </div>
-                        <div className="border-b border-gray-100 pb-3">
-                          <dt className="text-[11px] font-bold uppercase text-gray-500">تخفیف</dt>
-                          <dd className="mt-1 text-sm text-gray-600">
-                            {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
-                              ? `${variant.discountPercent}%`
-                              : '—'}
-                          </dd>
-                        </div>
-                        <div className="border-b border-gray-100 pb-3">
-                          <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت نهایی</dt>
-                          <dd className="mt-1 text-sm font-medium">
-                            {(variant.discountPrice ?? variant.price).toLocaleString()} تومان
-                          </dd>
-                        </div>
-                        <div className="border-b border-gray-100 pb-3">
                           <dt className="text-[11px] font-bold uppercase text-gray-500">موجودی</dt>
                           <dd className="mt-1">
                             <span
@@ -258,9 +272,6 @@ const ProductDetail = () => {
                         <th className="px-4 py-3">SKU</th>
                         <th className="px-4 py-3">رنگ</th>
                         <th className="px-4 py-3">سایز</th>
-                        <th className="px-4 py-3">قیمت</th>
-                        <th className="px-4 py-3">تخفیف</th>
-                        <th className="px-4 py-3">قیمت نهایی</th>
                         <th className="px-4 py-3">موجودی</th>
                         <th className="px-4 py-3">مشخصات فنی</th>
                       </tr>
@@ -285,17 +296,6 @@ const ProductDetail = () => {
                             )}
                           </td>
                           <td className="px-4 py-3">{variant.size || '-'}</td>
-                          <td className="px-4 py-3">
-                            {variant.price.toLocaleString()} تومان
-                          </td>
-                          <td className="px-4 py-3 text-gray-500">
-                            {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
-                              ? `${variant.discountPercent}%`
-                              : '-'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(variant.discountPrice ?? variant.price).toLocaleString()} تومان
-                          </td>
                           <td className="px-4 py-3">
                             <span
                               className={`rounded-md px-2 py-1 text-xs font-medium ${

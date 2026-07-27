@@ -7,16 +7,18 @@ export interface ProductVariant {
   size?: string;
   color?: string;
   colorCode?: string;
-  price: number;
-  discountPrice?: number;
-  discountPercent?: number;
   stock: number;
   specifications?: Record<string, SpecificationValue>;
+  /** قیمت سطح محصول است؛ این مقادیر فقط برای خواندن از پاسخ API آینه می‌شوند (قابل ارسال در ساخت/ویرایش نیستند) */
+  price?: number;
+  discountPrice?: number;
+  discountPercent?: number;
 }
 
 export interface Category {
   id: string;
   title: string;
+  profitMultiplier?: number;
 }
 
 export interface Collection {
@@ -36,6 +38,15 @@ export interface Product {
   variants?: ProductVariant[];
   isFeatured?: boolean;
   showInIntro?: boolean;
+  /** کد خودکار محصول (بر اساس بازهٔ کد دسته‌بندی) */
+  code: number;
+  /** بهای تمام‌شدهٔ خالص (ورودی ادمین) */
+  costPrice: number;
+  /** قیمت نهایی محاسبه‌شده از فرمول */
+  finalPrice: number;
+  /** تخفیف دستی روی قیمت نهایی */
+  discountPrice?: number;
+  discountPercent?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +60,9 @@ export interface ProductUpsertPayload {
   variants?: ProductVariant[];
   isFeatured?: boolean;
   showInIntro?: boolean;
+  costPrice: number;
+  discountPrice?: number;
+  discountPercent?: number;
 }
 
 export interface PaginationMeta {

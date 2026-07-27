@@ -18,6 +18,7 @@ import {
 import { sizeService, type Size } from '../services/size.service';
 import { productService } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
+import api from '../services/api';
 import {
   X,
   Plus,
@@ -68,9 +69,16 @@ const CreateProduct = () => {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [collectionId, setCollectionId] = useState('');
-  const [basePrice, setBasePrice] = useState<number>(0);
+  const [costPrice, setCostPrice] = useState<number>(0);
+  const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
   const [isFeatured, setIsFeatured] = useState(false);
-const [showInIntro, setShowInIntro] = useState(false);
+  const [showInIntro, setShowInIntro] = useState(false);
+
+  // تنظیمات سراسری قیمت‌گذاری (برای پیش‌نمایش قیمت نهایی، محاسبهٔ قطعی همیشه سمت سرور است)
+  const [pricingSettings, setPricingSettings] = useState<{ packagingCost: number; taxPercent: number }>({
+    packagingCost: 0,
+    taxPercent: 0,
+  });
 
   // Modals: Add Category / Add Collection
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -102,8 +110,6 @@ const [showInIntro, setShowInIntro] = useState(false);
     sku: string;
     size?: string;
     color?: string;
-    price: number;
-    discountPercent?: number;
     stock: number;
     specifications: Record<string, string | number>;
   }
@@ -138,10 +144,26 @@ const [showInIntro, setShowInIntro] = useState(false);
       setCollections(cols.data);
       setSpecKeys(specs);
       setSizeOptions(Array.isArray(sizeList) ? sizeList : []);
+      try {
+        const pricingRes = await api.get('/site-settings/pricing');
+        setPricingSettings({
+          packagingCost: Number(pricingRes.data?.packagingCost) || 0,
+          taxPercent: Number(pricingRes.data?.taxPercent) || 0,
+        });
+      } catch {
+        // اگر دسترسی به تنظیمات نبود، پیش‌نمایش صرفاً نمایش داده نمی‌شود؛ محاسبهٔ نهایی همیشه سمت سرور است
+      }
     } catch (error) {
       console.error(error);
     }
   };
+
+  const selectedCategory = categories.find((c) => c.id === categoryId);
+  const previewFinalPrice = (() => {
+    const profitMultiplier = Number(selectedCategory?.profitMultiplier ?? 1);
+    const base = (costPrice + pricingSettings.packagingCost) * profitMultiplier;
+    return Math.round(base * (1 + pricingSettings.taxPercent / 100));
+  })();
 
   const fetchCategoriesWithSearch = useCallback(async (search: string) => {
     setSearchCategoryLoading(true);
@@ -322,7 +344,6 @@ const [showInIntro, setShowInIntro] = useState(false);
                 sku: `${c}-${s}`,
                 color: c,
                 size: s,
-                price: basePrice,
                 stock: 0,
                 specifications: {},
               });
@@ -337,7 +358,6 @@ const [showInIntro, setShowInIntro] = useState(false);
               id: Math.random().toString(36).substr(2, 9),
               sku: c,
               color: c,
-              price: basePrice,
               stock: 0,
               specifications: {},
             });
@@ -351,7 +371,6 @@ const [showInIntro, setShowInIntro] = useState(false);
               id: Math.random().toString(36).substr(2, 9),
               sku: s,
               size: s,
-              price: basePrice,
               stock: 0,
               specifications: {},
             });
@@ -363,14 +382,13 @@ const [showInIntro, setShowInIntro] = useState(false);
           newVariants.push({
             id: Math.random().toString(36).substr(2, 9),
             sku: 'default',
-            price: basePrice,
             stock: 0,
             specifications: {},
           });
       }
       return newVariants;
     });
-  }, [colors, sizes, basePrice]);
+  }, [colors, sizes]);
 
   const updateVariant = (
     id: string,
@@ -409,6 +427,8 @@ const [showInIntro, setShowInIntro] = useState(false);
         images: uploadedUrls,
         isFeatured,
         showInIntro,
+        costPrice,
+        discountPercent,
         variants: variants.map((v) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { id, ...rest } = v;
@@ -515,14 +535,38 @@ const [showInIntro, setShowInIntro] = useState(false);
           </div>
            <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                قیمت پایه (تومان)
+                قیمت تمام‌شده خالص (هزینه خرید، تومان)
               </label>
               <input
                 type="text"
                 inputMode="numeric"
-                value={formatPriceWithSeparator(basePrice)}
-                onChange={(e) => setBasePrice(parsePriceWithSeparator(e.target.value))}
+                value={formatPriceWithSeparator(costPrice)}
+                onChange={(e) => setCostPrice(parsePriceWithSeparator(e.target.value))}
                 placeholder="مثال: ۴۰٬۰۰۰٬۰۰۰"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                قیمت نهایی محاسبه‌شده (پیش‌نمایش):{' '}
+                <span className="font-bold text-gray-700">
+                  {formatPriceWithSeparator(previewFinalPrice, false)} تومان
+                </span>{' '}
+                — بر اساس هزینه بسته‌بندی، مالیات و ضریب سود دسته‌بندی انتخاب‌شده. محاسبهٔ قطعی هنگام ذخیره روی سرور انجام می‌شود.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                تخفیف دستی (٪) — اختیاری
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discountPercent ?? ''}
+                onChange={(e) =>
+                  setDiscountPercent(e.target.value === '' ? undefined : Number(e.target.value))
+                }
+                placeholder="مثلاً ۲۰"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
               />
             </div>
@@ -820,57 +864,6 @@ const [showInIntro, setShowInIntro] = useState(false);
                         <dd className="mt-1 text-sm">{variant.size || '—'}</dd>
                       </div>
                       <div className="border-b border-gray-100 pb-3">
-                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت</dt>
-                        <dd className="mt-1">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formatPriceWithSeparator(variant.price)}
-                            onChange={(e) =>
-                              updateVariant(
-                                variant.id,
-                                'price',
-                                parsePriceWithSeparator(e.target.value),
-                              )}
-                            placeholder="۰"
-                            className="w-full max-w-xs rounded border px-2 py-2 text-left"
-                          />
-                        </dd>
-                      </div>
-                      <div className="border-b border-gray-100 pb-3">
-                        <dt className="text-[11px] font-bold uppercase text-gray-500">تخفیف (%)</dt>
-                        <dd className="mt-1">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={variant.discountPercent ?? ''}
-                            onChange={(e) =>
-                              updateVariant(
-                                variant.id,
-                                'discountPercent',
-                                e.target.value === '' ? undefined : Number(e.target.value),
-                              )}
-                            className="w-full max-w-[8rem] rounded border px-2 py-2"
-                            placeholder="مثلاً 20"
-                          />
-                        </dd>
-                      </div>
-                      <div className="border-b border-gray-100 pb-3">
-                        <dt className="text-[11px] font-bold uppercase text-gray-500">قیمت نهایی</dt>
-                        <dd className="mt-1 text-sm font-medium text-gray-700">
-                          {typeof variant.discountPercent === 'number' &&
-                          variant.discountPercent > 0
-                            ? formatPriceWithSeparator(
-                                Math.round(
-                                  (variant.price * (100 - variant.discountPercent)) / 100,
-                                ),
-                                false,
-                              )
-                            : formatPriceWithSeparator(variant.price, false)}
-                        </dd>
-                      </div>
-                      <div className="border-b border-gray-100 pb-3">
                         <dt className="text-[11px] font-bold uppercase text-gray-500">موجودی</dt>
                         <dd className="mt-1">
                           <input
@@ -917,9 +910,6 @@ const [showInIntro, setShowInIntro] = useState(false);
                       <th className="py-3 text-right">SKU</th>
                       <th className="py-3 text-right">رنگ</th>
                       <th className="py-3 text-right">سایز</th>
-                      <th className="py-3 text-right">قیمت</th>
-                      <th className="py-3 text-right">تخفیف (%)</th>
-                      <th className="py-3 text-right">قیمت نهایی</th>
                       <th className="py-3 text-right">موجودی</th>
                       <th className="py-3 text-right">مشخصات</th>
                     </tr>
@@ -931,39 +921,8 @@ const [showInIntro, setShowInIntro] = useState(false);
                         <td className="py-3">{variant.color || '-'}</td>
                         <td className="py-3">{variant.size || '-'}</td>
                         <td className="py-3">
-                            <input 
-                                type="text"
-                                inputMode="numeric"
-                                value={formatPriceWithSeparator(variant.price)}
-                                onChange={(e) => updateVariant(variant.id, 'price', parsePriceWithSeparator(e.target.value))}
-                                placeholder="۰"
-                                className="w-28 px-2 py-1 border rounded text-left"
-                            />
-                        </td>
-                        <td className="py-3">
-                            <input 
+                             <input
                                 type="number"
-                                min={0}
-                                max={100}
-                                value={variant.discountPercent ?? ''}
-                                onChange={(e) =>
-                                  updateVariant(
-                                    variant.id,
-                                    'discountPercent',
-                                    e.target.value === '' ? undefined : Number(e.target.value),
-                                  )}
-                                className="w-20 px-2 py-1 border rounded"
-                                placeholder="مثلاً 20"
-                            />
-                        </td>
-                        <td className="py-3 text-gray-600 font-medium">
-                          {typeof variant.discountPercent === 'number' && variant.discountPercent > 0
-                            ? formatPriceWithSeparator(Math.round((variant.price * (100 - variant.discountPercent)) / 100), false)
-                            : formatPriceWithSeparator(variant.price, false)}
-                        </td>
-                        <td className="py-3">
-                             <input 
-                                type="number" 
                                 value={variant.stock}
                                 onChange={(e) => updateVariant(variant.id, 'stock', Number(e.target.value))}
                                 className="w-20 px-2 py-1 border rounded"

@@ -35,6 +35,10 @@ const Categories = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [codeStart, setCodeStart] = useState<string>('');
+  const [profitMultiplier, setProfitMultiplier] = useState<string>('1');
+  // اگر برای این دسته‌بندی محصولی کد گرفته باشد، nextCode بزرگ‌تر از codeStart است — دیگر نباید codeStart را عوض کرد
+  const [codeStartLocked, setCodeStartLocked] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -64,6 +68,9 @@ const Categories = () => {
     setImageFile(null);
     setImagePreview(null);
     setEditingId(null);
+    setCodeStart('');
+    setProfitMultiplier('1');
+    setCodeStartLocked(false);
   };
 
   const handleEdit = (category: Category) => {
@@ -72,6 +79,9 @@ const Categories = () => {
     setDescription(category.description || '');
     setParentId(category.parentId || '');
     setImagePreview(category.image || null);
+    setCodeStart(String(category.codeStart));
+    setProfitMultiplier(String(category.profitMultiplier));
+    setCodeStartLocked(category.nextCode !== category.codeStart);
     setIsModalOpen(true);
   };
 
@@ -106,6 +116,10 @@ const Categories = () => {
       if (imageFile) {
         formData.append('image', imageFile);
       }
+      if (!codeStartLocked && codeStart.trim() !== '') {
+        formData.append('codeStart', codeStart.trim());
+      }
+      formData.append('profitMultiplier', profitMultiplier.trim() || '1');
 
       if (editingId) {
         await categoryService.update(editingId, formData);
@@ -153,6 +167,20 @@ const Categories = () => {
         ),
     },
     { key: 'title', title: 'عنوان', render: (category) => category.title },
+    {
+      key: 'codeRange',
+      title: 'بازهٔ کد',
+      render: (category) => (
+        <span className="text-sm text-gray-600">
+          {category.codeStart} → {category.nextCode - 1 >= category.codeStart ? category.nextCode - 1 : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'profitMultiplier',
+      title: 'ضریب سود',
+      render: (category) => category.profitMultiplier,
+    },
     {
       key: 'parent',
       title: 'والد',
@@ -267,6 +295,43 @@ const Categories = () => {
                   })),
               ]}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                کد شروع
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={codeStart}
+                onChange={(e) => setCodeStart(e.target.value)}
+                disabled={codeStartLocked}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zafting-accent/20 disabled:bg-gray-100 disabled:text-gray-400"
+                placeholder="مثال: ۲۰۰"
+                required
+              />
+              {codeStartLocked && (
+                <p className="text-xs text-amber-600 mt-1">
+                  چون این دسته‌بندی قبلاً کد به محصولی داده، کد شروع دیگر قابل تغییر نیست.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ضریب سود
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={profitMultiplier}
+                onChange={(e) => setProfitMultiplier(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zafting-accent/20"
+                placeholder="مثال: ۲.۵"
+              />
+            </div>
           </div>
 
           <div>

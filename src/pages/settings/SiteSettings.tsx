@@ -87,6 +87,12 @@ const SiteSettings = () => {
     null,
   );
 
+  const [packagingCost, setPackagingCost] = useState('');
+  const [taxPercent, setTaxPercent] = useState('');
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+  const [pricingError, setPricingError] = useState<string | null>(null);
+
   const fetchShippingMethods = useCallback(async () => {
     setShippingLoading(true);
     setShippingError(null);
@@ -141,12 +147,29 @@ const SiteSettings = () => {
     fetchShippingMethods();
   }, [activeTab, auth, fetchShippingMethods]);
 
+  const fetchPricingSettings = useCallback(async () => {
+    setPricingLoading(true);
+    setPricingError(null);
+    try {
+      const { data } = await api.get<{ packagingCost: number; taxPercent: number }>(
+        '/site-settings/pricing',
+      );
+      setPackagingCost(String(data.packagingCost ?? 0));
+      setTaxPercent(String(data.taxPercent ?? 0));
+    } catch {
+      setPricingError('خطا در دریافت تنظیمات قیمت‌گذاری');
+    } finally {
+      setPricingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!canManageSiteSettings(auth)) return;
     if (activeTab !== 'general') return;
     fetchOtpProvider();
     fetchPaymentProviders();
-  }, [activeTab, auth, fetchOtpProvider, fetchPaymentProviders]);
+    fetchPricingSettings();
+  }, [activeTab, auth, fetchOtpProvider, fetchPaymentProviders, fetchPricingSettings]);
 
   if (!canManageSiteSettings(auth)) {
     return (
@@ -498,6 +521,85 @@ const SiteSettings = () => {
                   className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {paymentProvidersSaving ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : null}
+                  ذخیره
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-[#2A2A2A]">قیمت‌گذاری</h3>
+                <p className="text-sm text-gray-600 mt-2 leading-7">
+                  هزینه بسته‌بندی و درصد مالیات به‌صورت سراسری در محاسبهٔ قیمت نهایی همهٔ
+                  محصولات اعمال می‌شود. ضریب سود هر محصول از دسته‌بندی آن گرفته می‌شود.
+                </p>
+              </div>
+            </div>
+
+            {pricingError ? (
+              <div className="mt-4 text-sm text-red-600">{pricingError}</div>
+            ) : null}
+
+            {pricingLoading ? (
+              <div className="mt-6 flex items-center text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span className="ms-2 text-sm">در حال دریافت...</span>
+              </div>
+            ) : (
+              <div className="mt-6 flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    هزینه بسته‌بندی (تومان)
+                  </label>
+                  <input
+                    value={packagingCost}
+                    onChange={(e) => setPackagingCost(e.target.value)}
+                    inputMode="numeric"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+                    placeholder="مثال: 50000"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    درصد مالیات
+                  </label>
+                  <input
+                    value={taxPercent}
+                    onChange={(e) => setTaxPercent(e.target.value)}
+                    inputMode="numeric"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+                    placeholder="مثال: 10"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={pricingSaving}
+                  onClick={async () => {
+                    const parsedPackaging = parsePriceInput(packagingCost) ?? 0;
+                    const parsedTax = parsePriceInput(taxPercent) ?? 0;
+                    setPricingSaving(true);
+                    setPricingError(null);
+                    try {
+                      await api.patch('/site-settings/pricing', {
+                        packagingCost: parsedPackaging,
+                        taxPercent: parsedTax,
+                      });
+                      setPackagingCost(String(parsedPackaging));
+                      setTaxPercent(String(parsedTax));
+                    } catch {
+                      setPricingError('خطا در ذخیره تنظیمات قیمت‌گذاری');
+                    } finally {
+                      setPricingSaving(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {pricingSaving ? (
                     <Loader2 className="animate-spin" size={18} />
                   ) : null}
                   ذخیره
