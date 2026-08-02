@@ -90,6 +90,22 @@ export interface ProductListParams {
   maxPrice?: number;
 }
 
+export interface OutOfStockProduct {
+  id: string;
+  title: string;
+  code: number;
+  images: string[];
+  outOfStockNotifiedAt: string | null;
+  category: Category | null;
+  variants: Array<{
+    id: string;
+    sku: string;
+    size: string | null;
+    color: string | null;
+    stock: number;
+  }>;
+}
+
 export const productService = {
   create: async (data: ProductUpsertPayload): Promise<Product> => {
     const response = await api.post('/products', data);
@@ -113,5 +129,10 @@ export const productService = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/products/${id}`);
+  },
+
+  getOutOfStock: async (): Promise<OutOfStockProduct[]> => {
+    const response = await api.get('/products/out-of-stock');
+    return response.data;
   },
 };

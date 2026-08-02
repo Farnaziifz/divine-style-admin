@@ -65,6 +65,7 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
       { name: 'کالکشن‌ها', path: '/products/collections' },
       { name: 'دسته‌بندی‌ها', path: '/products/categories' },
       { name: 'مشخصات', path: '/products/specifications' },
+      { name: 'محصولات ناموجود', path: '/products/out-of-stock' },
     ] }] : []),
     ...(canSee('PRODUCTS_WRITE') ? [{ name: 'تقویم محتوا', icon: CalendarDays, path: '/content-calendar' }] : []),
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),

@@ -16,6 +16,7 @@ import ProductList from './pages/ProductList';
 import CreateProduct from './pages/CreateProduct';
 import ProductDetail from './pages/ProductDetail';
 import EditProduct from './pages/EditProduct';
+import OutOfStockProducts from './pages/OutOfStockProducts';
 import Orders from './pages/Orders';
 import DiscountCodes from './pages/DiscountCodes';
 import OrderDetail from './pages/OrderDetail';
@@ -66,6 +67,7 @@ function App() {
           <Route path="products">
             <Route index element={<ProductList />} />
             <Route path="create" element={<CreateProduct />} />
+            <Route path="out-of-stock" element={<OutOfStockProducts />} />
             <Route path=":id" element={<ProductDetail />} />
             <Route path=":id/edit" element={<EditProduct />} />
             <Route path="collections" element={<Collections />} />
