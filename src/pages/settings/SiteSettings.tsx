@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Loader2, Plus, Settings2, Truck, Edit2, Trash2, Power } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Settings2, Truck, Edit2, Trash2, Power, Bell } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import {
   shippingMethodService,
   type ShippingMethod,
 } from '../../services/shippingMethod.service';
+import {
+  orderNotificationPhoneService,
+  type OrderNotificationPhone,
+} from '../../services/orderNotificationPhone.service';
 import api from '../../services/api';
 
 const tabs = [
   { key: 'shipping', label: 'تنظیمات ارسال', icon: Truck },
+  { key: 'notifications', label: 'اطلاع‌رسانی سفارش', icon: Bell },
   { key: 'general', label: 'عمومی', icon: Settings2 },
 ] as const;
 
@@ -67,6 +72,19 @@ const SiteSettings = () => {
   const [isSavingNewShipping, setIsSavingNewShipping] = useState(false);
   const [editTarget, setEditTarget] = useState<ShippingMethod | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const [notificationPhones, setNotificationPhones] = useState<
+    OrderNotificationPhone[]
+  >([]);
+  const [notifPhonesLoading, setNotifPhonesLoading] = useState(false);
+  const [notifPhonesError, setNotifPhonesError] = useState<string | null>(null);
+  const [isAddPhoneOpen, setIsAddPhoneOpen] = useState(false);
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [newPhoneLabel, setNewPhoneLabel] = useState('');
+  const [isSavingNewPhone, setIsSavingNewPhone] = useState(false);
+  const [editPhoneTarget, setEditPhoneTarget] =
+    useState<OrderNotificationPhone | null>(null);
+  const [isDeletePhoneOpen, setIsDeletePhoneOpen] = useState(false);
 
   const [otpProvider, setOtpProvider] = useState<'ussdpanel' | 'sms_ir'>(
     'ussdpanel',
@@ -146,6 +164,26 @@ const SiteSettings = () => {
     if (activeTab !== 'shipping') return;
     fetchShippingMethods();
   }, [activeTab, auth, fetchShippingMethods]);
+
+  const fetchNotificationPhones = useCallback(async () => {
+    setNotifPhonesLoading(true);
+    setNotifPhonesError(null);
+    try {
+      const list = await orderNotificationPhoneService.getAll();
+      setNotificationPhones(list);
+    } catch {
+      setNotifPhonesError('خطا در دریافت لیست شماره‌ها');
+      setNotificationPhones([]);
+    } finally {
+      setNotifPhonesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!canManageSiteSettings(auth)) return;
+    if (activeTab !== 'notifications') return;
+    fetchNotificationPhones();
+  }, [activeTab, auth, fetchNotificationPhones]);
 
   const fetchPricingSettings = useCallback(async () => {
     setPricingLoading(true);
@@ -333,6 +371,111 @@ const SiteSettings = () => {
                     ) : (
                       <span className="text-sm text-gray-500">اختیاری</span>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'notifications' ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-[#2A2A2A]">
+                اطلاع‌رسانی سفارش
+              </h2>
+              <p className="text-sm text-gray-500 mt-2">
+                با ثبت هر سفارش جدید، پیامک به این شماره‌ها ارسال می‌شود.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddPhoneOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus size={18} />
+              افزودن شماره
+            </button>
+          </div>
+
+          {notifPhonesError ? (
+            <div className="mt-4 text-sm text-red-600">{notifPhonesError}</div>
+          ) : null}
+
+          {notifPhonesLoading ? (
+            <div className="mt-8 flex items-center justify-center text-gray-500">
+              <Loader2 className="animate-spin" size={20} />
+              <span className="ms-2 text-sm">در حال دریافت...</span>
+            </div>
+          ) : notificationPhones.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50 p-6 text-gray-600 text-sm">
+              هنوز شماره‌ای برای اطلاع‌رسانی ثبت نشده است.
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {notificationPhones.map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-[#2A2A2A] truncate" dir="ltr">
+                        {p.phoneNumber}
+                      </h3>
+                      {p.label ? (
+                        <p className="text-sm text-gray-600 mt-2 leading-7">
+                          {p.label}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400 mt-2">بدون برچسب</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`shrink-0 inline-flex px-3 py-1 rounded-full text-xs font-medium border ${
+                          p.isActive
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : 'bg-gray-100 text-gray-600 border-gray-200'
+                        }`}
+                      >
+                        {p.isActive ? 'فعال' : 'غیرفعال'}
+                      </span>
+                      <button
+                        type="button"
+                        title={p.isActive ? 'غیرفعال کردن' : 'فعال کردن'}
+                        onClick={async () => {
+                          const updated = await orderNotificationPhoneService.toggle(
+                            p.id,
+                          );
+                          setNotificationPhones((prev) =>
+                            prev.map((x) => (x.id === p.id ? updated : x)),
+                          );
+                        }}
+                        className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700"
+                      >
+                        <Power size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        title="ویرایش"
+                        onClick={() => setEditPhoneTarget(p)}
+                        className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        title="حذف"
+                        onClick={() => {
+                          setEditPhoneTarget(p);
+                          setIsDeletePhoneOpen(true);
+                        }}
+                        className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -780,6 +923,166 @@ const SiteSettings = () => {
           setShippingMethods((prev) => prev.filter((x) => x.id !== removed.id));
           setIsDeleteOpen(false);
           setEditTarget(null);
+        }}
+      />
+
+      <Modal
+        isOpen={isAddPhoneOpen}
+        onClose={() => setIsAddPhoneOpen(false)}
+        title="افزودن شماره اطلاع‌رسانی"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              شماره موبایل *
+            </label>
+            <input
+              value={newPhoneNumber}
+              onChange={(e) => setNewPhoneNumber(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+              placeholder="09121234567"
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              برچسب (اختیاری)
+            </label>
+            <input
+              value={newPhoneLabel}
+              onChange={(e) => setNewPhoneLabel(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+              placeholder="مثال: مدیر فروش"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddPhoneOpen(false)}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700"
+            >
+              انصراف
+            </button>
+            <button
+              type="button"
+              disabled={isSavingNewPhone || !/^09\d{9}$/.test(newPhoneNumber)}
+              onClick={async () => {
+                if (!/^09\d{9}$/.test(newPhoneNumber)) return;
+                setIsSavingNewPhone(true);
+                try {
+                  const created = await orderNotificationPhoneService.create({
+                    phoneNumber: newPhoneNumber,
+                    label: newPhoneLabel.trim() || undefined,
+                  });
+                  setNotificationPhones((prev) => [created, ...prev]);
+                  setNewPhoneNumber('');
+                  setNewPhoneLabel('');
+                  setIsAddPhoneOpen(false);
+                } finally {
+                  setIsSavingNewPhone(false);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSavingNewPhone ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <Plus size={18} />
+              )}
+              افزودن
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!editPhoneTarget}
+        onClose={() => setEditPhoneTarget(null)}
+        title="ویرایش شماره اطلاع‌رسانی"
+      >
+        {editPhoneTarget ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                شماره موبایل *
+              </label>
+              <input
+                defaultValue={editPhoneTarget.phoneNumber}
+                onChange={(e) =>
+                  setEditPhoneTarget({
+                    ...editPhoneTarget,
+                    phoneNumber: e.target.value,
+                  })
+                }
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                برچسب (اختیاری)
+              </label>
+              <input
+                defaultValue={editPhoneTarget.label || ''}
+                onChange={(e) =>
+                  setEditPhoneTarget({ ...editPhoneTarget, label: e.target.value })
+                }
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditPhoneTarget(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                disabled={!/^09\d{9}$/.test(editPhoneTarget.phoneNumber)}
+                onClick={async () => {
+                  if (!editPhoneTarget) return;
+                  const updated = await orderNotificationPhoneService.update(
+                    editPhoneTarget.id,
+                    {
+                      phoneNumber: editPhoneTarget.phoneNumber,
+                      label: editPhoneTarget.label || undefined,
+                    },
+                  );
+                  setNotificationPhones((prev) =>
+                    prev.map((x) => (x.id === editPhoneTarget.id ? updated : x)),
+                  );
+                  setEditPhoneTarget(null);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                ذخیره
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      <ConfirmModal
+        isOpen={isDeletePhoneOpen}
+        title="حذف شماره اطلاع‌رسانی"
+        message="آیا از حذف این شماره مطمئن هستید؟ این عمل قابل بازگشت نیست."
+        confirmText="حذف"
+        cancelText="انصراف"
+        onClose={() => {
+          setIsDeletePhoneOpen(false);
+          setEditPhoneTarget(null);
+        }}
+        onConfirm={async () => {
+          if (!editPhoneTarget) return;
+          const removed = await orderNotificationPhoneService.remove(
+            editPhoneTarget.id,
+          );
+          setNotificationPhones((prev) => prev.filter((x) => x.id !== removed.id));
+          setIsDeletePhoneOpen(false);
+          setEditPhoneTarget(null);
         }}
       />
     </div>
