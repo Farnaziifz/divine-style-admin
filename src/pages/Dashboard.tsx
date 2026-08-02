@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import api from '../services/api';
+import { JALALI_MONTH_NAMES, getCurrentJalaliYearMonth } from '../utils/persianDate';
 
 type SalesSummary = {
   range: { from: string; to: string };
@@ -21,6 +31,23 @@ type TopProductRow = {
   ordersCount: number;
   revenue: string;
 };
+
+type DailyJalaliRow = { day: number; ordersCount: number; payableAmount: number };
+type DailyJalaliResponse = {
+  year: number;
+  month: number;
+  monthName: string;
+  monthLength: number;
+  data: DailyJalaliRow[];
+};
+
+type MonthlyJalaliRow = {
+  month: number;
+  monthName: string;
+  ordersCount: number;
+  payableAmount: number;
+};
+type MonthlyJalaliResponse = { year: number; data: MonthlyJalaliRow[] };
 
 const formatToman = (value: string | number | null | undefined) => {
   if (value == null) return '-';
@@ -82,6 +109,71 @@ const Dashboard = () => {
       cancelled = true;
     };
   }, [range]);
+
+  const currentJalali = useMemo(() => getCurrentJalaliYearMonth(), []);
+  const jalaliYearOptions = useMemo(
+    () => [currentJalali.year, currentJalali.year - 1, currentJalali.year - 2],
+    [currentJalali.year],
+  );
+
+  const [dailyYear, setDailyYear] = useState(currentJalali.year);
+  const [dailyMonth, setDailyMonth] = useState(currentJalali.month);
+  const [dailyReport, setDailyReport] = useState<DailyJalaliResponse | null>(null);
+  const [dailyLoading, setDailyLoading] = useState(true);
+  const [dailyError, setDailyError] = useState<string | null>(null);
+
+  const maxDailyMonth = dailyYear === currentJalali.year ? currentJalali.month : 12;
+
+  useEffect(() => {
+    if (dailyMonth > maxDailyMonth) setDailyMonth(maxDailyMonth);
+  }, [dailyMonth, maxDailyMonth]);
+
+  const fetchDaily = useCallback(async (year: number, month: number) => {
+    setDailyLoading(true);
+    setDailyError(null);
+    try {
+      const { data } = await api.get<DailyJalaliResponse>(
+        '/admin/reports/sales/daily-jalali',
+        { params: { year, month } },
+      );
+      setDailyReport(data);
+    } catch {
+      setDailyError('خطا در دریافت فروش روزانه');
+      setDailyReport(null);
+    } finally {
+      setDailyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDaily(dailyYear, dailyMonth);
+  }, [dailyYear, dailyMonth, fetchDaily]);
+
+  const [monthlyYear, setMonthlyYear] = useState(currentJalali.year);
+  const [monthlyReport, setMonthlyReport] = useState<MonthlyJalaliResponse | null>(null);
+  const [monthlyLoading, setMonthlyLoading] = useState(true);
+  const [monthlyError, setMonthlyError] = useState<string | null>(null);
+
+  const fetchMonthly = useCallback(async (year: number) => {
+    setMonthlyLoading(true);
+    setMonthlyError(null);
+    try {
+      const { data } = await api.get<MonthlyJalaliResponse>(
+        '/admin/reports/sales/monthly-jalali',
+        { params: { year } },
+      );
+      setMonthlyReport(data);
+    } catch {
+      setMonthlyError('خطا در دریافت فروش ماهانه');
+      setMonthlyReport(null);
+    } finally {
+      setMonthlyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMonthly(monthlyYear);
+  }, [monthlyYear, fetchMonthly]);
 
   return (
     <div>
@@ -175,6 +267,132 @@ const Dashboard = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="bg-white/60 rounded-xl shadow-sm border border-zafting-accent/10 overflow-hidden">
+              <div className="p-5 border-b border-zafting-accent/10 flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-bold text-zafting-text">
+                  فروش روزانه در ماه
+                </h2>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={dailyYear}
+                    onChange={(e) => setDailyYear(Number(e.target.value))}
+                    className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                  >
+                    {jalaliYearOptions.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={dailyMonth}
+                    onChange={(e) => setDailyMonth(Number(e.target.value))}
+                    className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                  >
+                    {JALALI_MONTH_NAMES.map((name, idx) => {
+                      const monthNum = idx + 1;
+                      if (monthNum > maxDailyMonth) return null;
+                      return (
+                        <option key={monthNum} value={monthNum}>
+                          {name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="p-5">
+                {dailyLoading ? (
+                  <div className="h-72 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-zafting-accent" size={28} />
+                  </div>
+                ) : dailyError ? (
+                  <div className="h-72 flex items-center justify-center text-sm text-red-600">
+                    {dailyError}
+                  </div>
+                ) : (
+                  <div className="h-72" dir="ltr">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dailyReport?.data ?? []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="day"
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v) => formatNumber(v)}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v) => formatNumber(v)}
+                        />
+                        <Tooltip
+                          formatter={(value: any, name: any) =>
+                            name === 'payableAmount'
+                              ? [formatToman(value), 'فروش']
+                              : [formatNumber(value), 'تعداد سفارش']
+                          }
+                          labelFormatter={(day) => `روز ${formatNumber(Number(day))}`}
+                        />
+                        <Bar dataKey="payableAmount" fill="#b08968" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white/60 rounded-xl shadow-sm border border-zafting-accent/10 overflow-hidden">
+              <div className="p-5 border-b border-zafting-accent/10 flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-bold text-zafting-text">
+                  فروش ماهانه در سال
+                </h2>
+                <select
+                  value={monthlyYear}
+                  onChange={(e) => setMonthlyYear(Number(e.target.value))}
+                  className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                >
+                  {jalaliYearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="p-5">
+                {monthlyLoading ? (
+                  <div className="h-72 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-zafting-accent" size={28} />
+                  </div>
+                ) : monthlyError ? (
+                  <div className="h-72 flex items-center justify-center text-sm text-red-600">
+                    {monthlyError}
+                  </div>
+                ) : (
+                  <div className="h-72" dir="ltr">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyReport?.data ?? []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="monthName" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(v) => formatNumber(v)}
+                        />
+                        <Tooltip
+                          formatter={(value: any, name: any) =>
+                            name === 'payableAmount'
+                              ? [formatToman(value), 'فروش']
+                              : [formatNumber(value), 'تعداد سفارش']
+                          }
+                        />
+                        <Bar dataKey="payableAmount" fill="#7c9885" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>

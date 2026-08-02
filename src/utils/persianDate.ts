@@ -38,3 +38,24 @@ export function gregorianYmdAddDays(days: number): string {
   const d = String(t.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
+
+export const JALALI_MONTH_NAMES = [
+  'فروردین',
+  'اردیبهشت',
+  'خرداد',
+  'تیر',
+  'مرداد',
+  'شهریور',
+  'مهر',
+  'آبان',
+  'آذر',
+  'دی',
+  'بهمن',
+  'اسفند',
+];
+
+/** سال و ماه شمسیِ همین الان */
+export function getCurrentJalaliYearMonth(): { year: number; month: number } {
+  const d = new DateObject({ date: new Date(), calendar: persian }).setLocale(persian_fa);
+  return { year: d.year, month: d.month.number };
+}
