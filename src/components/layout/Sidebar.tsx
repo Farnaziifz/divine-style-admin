@@ -14,6 +14,7 @@ import {
   Shield,
   MessagesSquare,
   BookOpenText,
+  CalendarDays,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -65,6 +66,7 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
       { name: 'دسته‌بندی‌ها', path: '/products/categories' },
       { name: 'مشخصات', path: '/products/specifications' },
     ] }] : []),
+    ...(canSee('PRODUCTS_WRITE') ? [{ name: 'تقویم محتوا', icon: CalendarDays, path: '/content-calendar' }] : []),
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
     ...(canSee('USERS_MANAGE') ? [{ name: 'کاربران', icon: Users, path: '/users' }] : []),

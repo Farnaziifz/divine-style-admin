@@ -117,6 +117,20 @@ const ProductList = () => {
       ),
     },
     {
+      key: 'contentPostedAt',
+      title: 'شبکه‌های اجتماعی',
+      render: (item) =>
+        item.contentPostedAt ? (
+          <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+            پست شده
+          </span>
+        ) : (
+          <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+            پست نشده
+          </span>
+        ),
+    },
+    {
       key: 'actions',
       title: 'عملیات',
       render: (item) => (

@@ -20,6 +20,7 @@ import Orders from './pages/Orders';
 import DiscountCodes from './pages/DiscountCodes';
 import OrderDetail from './pages/OrderDetail';
 import RoleManagement from './pages/RoleManagement';
+import ContentCalendar from './pages/ContentCalendar';
 import Chats from './pages/Chats';
 import BlogCategories from './pages/BlogCategories';
 import BlogPosts from './pages/BlogPosts';
@@ -74,6 +75,7 @@ function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:orderCode" element={<OrderDetail />} />
           <Route path="discount-codes" element={<DiscountCodes />} />
+          <Route path="content-calendar" element={<ContentCalendar />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
           <Route path="roles" element={<RoleManagement />} />

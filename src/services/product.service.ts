@@ -47,6 +47,8 @@ export interface Product {
   /** تخفیف دستی روی قیمت نهایی */
   discountPrice?: number;
   discountPercent?: number;
+  /** اولین باری که این محصول توی شبکه‌های اجتماعی پست شد (از تقویم محتوایی) */
+  contentPostedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
