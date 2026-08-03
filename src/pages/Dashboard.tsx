@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +23,9 @@ type SalesSummary = {
   shippingCost: string;
   payableAmount: string;
   averageOrderValue: string;
+  costOfGoods: string;
+  packagingCost: string;
+  netProfit: string;
 };
 
 type TopProductRow = {
@@ -46,6 +50,7 @@ type MonthlyJalaliRow = {
   monthName: string;
   ordersCount: number;
   payableAmount: number;
+  netProfit: number;
 };
 type MonthlyJalaliResponse = { year: number; data: MonthlyJalaliRow[] };
 
@@ -191,7 +196,7 @@ const Dashboard = () => {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white/60 p-6 rounded-xl shadow-sm border border-zafting-accent/10">
               <h3 className="text-lg font-medium text-zafting-text mb-2">
                 فروش ۳۰ روز اخیر
@@ -201,6 +206,18 @@ const Dashboard = () => {
               </p>
               <p className="mt-2 text-xs text-gray-500">
                 میانگین هر سفارش: {formatToman(summary?.averageOrderValue)}
+              </p>
+            </div>
+
+            <div className="bg-white/60 p-6 rounded-xl shadow-sm border border-zafting-accent/10">
+              <h3 className="text-lg font-medium text-zafting-text mb-2">
+                سود خالص ۳۰ روز اخیر
+              </h3>
+              <p className="text-3xl font-bold text-emerald-700">
+                {formatToman(summary?.netProfit)}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                پس از کسر بهای کالا، بسته‌بندی و هزینه ارسال
               </p>
             </div>
 
@@ -384,10 +401,18 @@ const Dashboard = () => {
                           formatter={(value: any, name: any) =>
                             name === 'payableAmount'
                               ? [formatToman(value), 'فروش']
-                              : [formatNumber(value), 'تعداد سفارش']
+                              : name === 'netProfit'
+                                ? [formatToman(value), 'سود خالص']
+                                : [formatNumber(value), 'تعداد سفارش']
+                          }
+                        />
+                        <Legend
+                          formatter={(value) =>
+                            value === 'payableAmount' ? 'فروش' : 'سود خالص'
                           }
                         />
                         <Bar dataKey="payableAmount" fill="#7c9885" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="netProfit" fill="#b08968" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
