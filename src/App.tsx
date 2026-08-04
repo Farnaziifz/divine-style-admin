@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -9,6 +9,8 @@ import SecuritySettings from './pages/settings/SecuritySettings';
 import SiteSettings from './pages/settings/SiteSettings';
 import Users from './pages/Users';
 import UserDetail from './pages/UserDetail';
+import CustomerGroups from './pages/CustomerGroups';
+import CustomerGroupDetail from './pages/CustomerGroupDetail';
 import Collections from './pages/Collections';
 import Categories from './pages/Categories';
 import Specifications from './pages/Specifications';
@@ -26,6 +28,15 @@ import Chats from './pages/Chats';
 import BlogCategories from './pages/BlogCategories';
 import BlogPosts from './pages/BlogPosts';
 import BlogPostEditor from './pages/BlogPostEditor';
+import LoyaltyDashboard from './pages/LoyaltyDashboard';
+import LoyaltySegments from './pages/LoyaltySegments';
+import LoyaltyDiscountCodes from './pages/LoyaltyDiscountCodes';
+import LoyaltyCashback from './pages/LoyaltyCashback';
+import LoyaltyCoupons from './pages/LoyaltyCoupons';
+import LoyaltyCreditPoints from './pages/LoyaltyCreditPoints';
+import LoyaltyChurnEvaluation from './pages/LoyaltyChurnEvaluation';
+import LoyaltyLoyaltyEvaluation from './pages/LoyaltyLoyaltyEvaluation';
+import LoyaltyReports from './pages/LoyaltyReports';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!localStorage.getItem('accessToken');
@@ -44,6 +55,32 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   } catch {
     localStorage.clear();
     return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+/**
+ * حفاظت اضافه در سطح روت (نه فقط پنهان‌کردن آیتم منو) — چون این بخش داده‌های مالی
+ * حساس (مبالغ تخفیف/کش‌بک) نشان می‌دهد. بقیهٔ صفحات این الگو را ندارند و فقط با
+ * canSee() در Sidebar پنهان می‌شوند؛ برای این بخش عمداً سخت‌گیرتریم.
+ */
+const LoyaltyClubRoute = ({ children }: { children: ReactNode }) => {
+  const hasAccess = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = raw
+        ? (JSON.parse(raw) as { role?: string; permissions?: string[] })
+        : null;
+      const role = parsed?.role;
+      const permissions = Array.isArray(parsed?.permissions) ? parsed.permissions : [];
+      return role === 'ADMIN' || (role === 'OPERATOR' && permissions.includes('LOYALTY_CLUB_MANAGE'));
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!hasAccess) {
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 };
@@ -80,6 +117,26 @@ function App() {
           <Route path="content-calendar" element={<ContentCalendar />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
+          <Route path="customer-groups" element={<CustomerGroups />} />
+          <Route path="customer-groups/:id" element={<CustomerGroupDetail />} />
+          <Route
+            path="loyalty-club"
+            element={
+              <LoyaltyClubRoute>
+                <Outlet />
+              </LoyaltyClubRoute>
+            }
+          >
+            <Route path="dashboard" element={<LoyaltyDashboard />} />
+            <Route path="segments" element={<LoyaltySegments />} />
+            <Route path="discount-codes" element={<LoyaltyDiscountCodes />} />
+            <Route path="cashback" element={<LoyaltyCashback />} />
+            <Route path="coupons" element={<LoyaltyCoupons />} />
+            <Route path="credit-points" element={<LoyaltyCreditPoints />} />
+            <Route path="churn-evaluation" element={<LoyaltyChurnEvaluation />} />
+            <Route path="loyalty-evaluation" element={<LoyaltyLoyaltyEvaluation />} />
+            <Route path="reports" element={<LoyaltyReports />} />
+          </Route>
           <Route path="roles" element={<RoleManagement />} />
           <Route path="direct" element={<Chats />} />
           <Route path="blog">

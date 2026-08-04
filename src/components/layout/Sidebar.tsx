@@ -15,6 +15,7 @@ import {
   MessagesSquare,
   BookOpenText,
   CalendarDays,
+  Gift,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -70,7 +71,39 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     ...(canSee('PRODUCTS_WRITE') ? [{ name: 'تقویم محتوا', icon: CalendarDays, path: '/content-calendar' }] : []),
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
-    ...(canSee('USERS_MANAGE') ? [{ name: 'کاربران', icon: Users, path: '/users' }] : []),
+    ...(canSee('USERS_MANAGE')
+      ? [
+          {
+            name: 'کاربران',
+            icon: Users,
+            path: '/users',
+            children: [
+              { name: 'لیست کاربران', path: '/users' },
+              { name: 'دسته‌بندی مشتریان', path: '/customer-groups' },
+            ],
+          },
+        ]
+      : []),
+    ...(canSee('LOYALTY_CLUB_MANAGE')
+      ? [
+          {
+            name: 'باشگاه مشتریان',
+            icon: Gift,
+            path: '/loyalty-club',
+            children: [
+              { name: 'داشبورد', path: '/loyalty-club/dashboard' },
+              { name: 'دسته‌بندی مشتریان', path: '/loyalty-club/segments' },
+              { name: 'کدهای تخفیف', path: '/loyalty-club/discount-codes' },
+              { name: 'کش‌بک', path: '/loyalty-club/cashback' },
+              { name: 'کوپن‌ها', path: '/loyalty-club/coupons' },
+              { name: 'اعتبار هدیه و امتیاز', path: '/loyalty-club/credit-points' },
+              { name: 'ارزیابی ریزش مشتریان', path: '/loyalty-club/churn-evaluation' },
+              { name: 'ارزیابی وفاداری مشتریان', path: '/loyalty-club/loyalty-evaluation' },
+              { name: 'گزارش‌ها', path: '/loyalty-club/reports' },
+            ],
+          },
+        ]
+      : []),
     ...(canSee('CHAT_MANAGE') ? [{ name: 'گفتگو', icon: MessagesSquare, path: '/direct' }] : []),
     ...(canSee('BLOG_MANAGE')
       ? [
@@ -119,10 +152,14 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const hasChildren = item.children && item.children.length > 0;
-            const isSubmenuOpen = openSubmenus.includes(item.path);
+            const matchesChild = hasChildren
+              ? item.children!.some((c) => location.pathname.startsWith(c.path))
+              : false;
+            const isSubmenuOpen = openSubmenus.includes(item.path) || matchesChild;
             const isActive =
               location.pathname === item.path ||
-              (hasChildren && location.pathname.startsWith(item.path));
+              (hasChildren && location.pathname.startsWith(item.path)) ||
+              matchesChild;
 
             return (
               <li key={item.path}>
