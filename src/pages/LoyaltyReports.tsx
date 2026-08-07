@@ -207,10 +207,13 @@ const LoyaltyReports = () => {
                     tickFormatter={(v: number) => `${v}%`}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'successRatePercent') return [`${value}%`, 'نرخ موفقیت'];
-                      if (name === 'totalCost') return [formatToman(value), 'هزینه'];
-                      return [formatToman(value), 'درآمد'];
+                    formatter={(value, name) => {
+                      const numericValue = Number(value);
+                      if (name === 'successRatePercent')
+                        return [`${numericValue}%`, 'نرخ موفقیت'] as [string, string];
+                      if (name === 'totalCost')
+                        return [formatToman(numericValue), 'هزینه'] as [string, string];
+                      return [formatToman(numericValue), 'درآمد'] as [string, string];
                     }}
                   />
                   <Legend
@@ -277,10 +280,13 @@ const LoyaltyReports = () => {
                     tickFormatter={(v: number) => `${v}%`}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'successRatePercent') return [`${value}%`, 'نرخ موفقیت'];
-                      if (name === 'totalCost') return [formatToman(value), 'هزینه'];
-                      return [formatToman(value), 'درآمد'];
+                    formatter={(value, name) => {
+                      const numericValue = Number(value);
+                      if (name === 'successRatePercent')
+                        return [`${numericValue}%`, 'نرخ موفقیت'] as [string, string];
+                      if (name === 'totalCost')
+                        return [formatToman(numericValue), 'هزینه'] as [string, string];
+                      return [formatToman(numericValue), 'درآمد'] as [string, string];
                     }}
                   />
                   <Legend

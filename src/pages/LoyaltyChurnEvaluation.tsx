@@ -140,8 +140,10 @@ const LoyaltyChurnEvaluation = () => {
                         tickFormatter={(v) => `${v}%`}
                       />
                       <Tooltip
-                        formatter={(value: number) => [`${value}%`, 'نرخ ریزش']}
-                        labelFormatter={(v: string) => formatFullDate(v)}
+                        formatter={(value) =>
+                          [`${value}%`, 'نرخ ریزش'] as [string, string]
+                        }
+                        labelFormatter={(v) => formatFullDate(String(v))}
                       />
                       <Line
                         type="monotone"

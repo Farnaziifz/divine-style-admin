@@ -140,8 +140,10 @@ const LoyaltyLoyaltyEvaluation = () => {
                         tickFormatter={(v) => `${v}%`}
                       />
                       <Tooltip
-                        formatter={(value: number) => [`${value}%`, 'نرخ وفاداری']}
-                        labelFormatter={(v: string) => formatFullDate(v)}
+                        formatter={(value) =>
+                          [`${value}%`, 'نرخ وفاداری'] as [string, string]
+                        }
+                        labelFormatter={(v) => formatFullDate(String(v))}
                       />
                       <Line
                         type="monotone"
