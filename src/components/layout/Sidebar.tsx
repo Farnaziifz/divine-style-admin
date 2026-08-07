@@ -16,6 +16,7 @@ import {
   BookOpenText,
   CalendarDays,
   Gift,
+  Store,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -70,6 +71,20 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     ] }] : []),
     ...(canSee('PRODUCTS_WRITE') ? [{ name: 'تقویم محتوا', icon: CalendarDays, path: '/content-calendar' }] : []),
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
+    ...(canSee('OFFLINE_SALES_WRITE') || canSee('OFFLINE_SALES_READ')
+      ? [
+          {
+            name: 'فروش حضوری/اینستا',
+            icon: Store,
+            path: '/offline-sales',
+            children: [
+              { name: 'لیست فروش‌ها', path: '/offline-sales' },
+              { name: 'ثبت فروش جدید', path: '/offline-sales/create' },
+              { name: 'گزارش فروش دستی', path: '/offline-sales/report' },
+            ],
+          },
+        ]
+      : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
     ...(canSee('USERS_MANAGE')
       ? [

@@ -14,6 +14,9 @@ type PermissionOption = {
 const permissionOptions: PermissionOption[] = [
   { key: 'ORDERS_READ', label: 'مشاهده سفارشات' },
   { key: 'ORDERS_WRITE', label: 'تغییر وضعیت سفارش' },
+  { key: 'OFFLINE_SALES_READ', label: 'مشاهده فروش حضوری/اینستا' },
+  { key: 'OFFLINE_SALES_WRITE', label: 'ثبت فروش حضوری/اینستا' },
+  { key: 'REPORTS_VIEW', label: 'مشاهده گزارش‌های فروش' },
   { key: 'PRODUCTS_WRITE', label: 'مدیریت محصولات' },
   { key: 'DISCOUNTS_WRITE', label: 'مدیریت کدهای تخفیف' },
   { key: 'USERS_MANAGE', label: 'مدیریت کاربران و نقش‌ها' },

@@ -3,6 +3,8 @@ import api from './api';
 export type SpecificationValue = string | number | boolean | null;
 
 export interface ProductVariant {
+  /** فقط در پاسخ API حاضر است؛ در payload ساخت/ویرایش محصول ارسال نمی‌شود */
+  id?: string;
   sku: string;
   size?: string;
   color?: string;
