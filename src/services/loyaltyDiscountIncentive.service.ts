@@ -1,11 +1,14 @@
 import api from './api';
 
 export type IncentiveValueType = 'PERCENTAGE' | 'FIXED_AMOUNT';
-export type IncentiveTierType = 'FLAT' | 'STEPPED';
+export type IncentiveTierType = 'FLAT' | 'STEPPED' | 'USAGE_STEPPED';
 export type IncentiveUsageType = 'SINGLE_USE' | 'MULTI_USE';
 
 export interface DiscountCodeTier {
-  minAmount: number;
+  /** برای tierType = STEPPED */
+  minAmount?: number;
+  /** برای tierType = USAGE_STEPPED — امین بار استفادهٔ مشتری (۱، ۲، ۳، ...) */
+  usageIndex?: number;
   value: number;
 }
 

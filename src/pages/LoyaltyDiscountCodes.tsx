@@ -13,7 +13,9 @@ import {
 } from '../services/loyaltyDiscountIncentive.service';
 import { loyaltySegmentService, type LoyaltySegment } from '../services/loyaltySegment.service';
 import { gregorianYmdToday } from '../utils/persianDate';
-import { Plus, Edit2, Power, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Power, Loader2, X } from 'lucide-react';
+
+const DEFAULT_USAGE_STAGES = [10, 15, 20];
 
 function startOfDayIso(ymd: string): string {
   const d = new Date(ymd);
@@ -54,6 +56,9 @@ const LoyaltyDiscountCodes = () => {
   const [value, setValue] = useState<string>('');
   const [tierType, setTierType] = useState<IncentiveTierType>('FLAT');
   const [usageType, setUsageType] = useState<IncentiveUsageType>('SINGLE_USE');
+  const [usageStageValues, setUsageStageValues] = useState<string[]>(
+    DEFAULT_USAGE_STAGES.map(String),
+  );
   const [minPurchaseAmount, setMinPurchaseAmount] = useState<string>('');
   const [targetSegmentId, setTargetSegmentId] = useState<string>('');
   const [startsAt, setStartsAt] = useState<string>('');
@@ -96,6 +101,7 @@ const LoyaltyDiscountCodes = () => {
     setValue('');
     setTierType('FLAT');
     setUsageType('SINGLE_USE');
+    setUsageStageValues(DEFAULT_USAGE_STAGES.map(String));
     setMinPurchaseAmount('');
     setTargetSegmentId('');
     setStartsAt(gregorianYmdToday());
@@ -112,6 +118,14 @@ const LoyaltyDiscountCodes = () => {
     setValue(String(row.discountCodeDetail?.value ?? ''));
     setTierType(row.discountCodeDetail?.tierType ?? 'FLAT');
     setUsageType(row.discountCodeDetail?.usageType ?? 'SINGLE_USE');
+    setUsageStageValues(
+      row.discountCodeDetail?.tierType === 'USAGE_STEPPED' &&
+        row.discountCodeDetail.tiers.length
+        ? [...row.discountCodeDetail.tiers]
+            .sort((a, b) => (a.usageIndex ?? 0) - (b.usageIndex ?? 0))
+            .map((t) => String(t.value))
+        : DEFAULT_USAGE_STAGES.map(String),
+    );
     setMinPurchaseAmount(
       row.discountCodeDetail?.minPurchaseAmount != null
         ? String(row.discountCodeDetail.minPurchaseAmount)
@@ -152,8 +166,19 @@ const LoyaltyDiscountCodes = () => {
     e.preventDefault();
     setFormError(null);
 
-    if (!title.trim() || !code.trim() || !value.trim() || !startsAt || !endsAt) {
+    const isUsageStepped = tierType === 'USAGE_STEPPED';
+    if (
+      !title.trim() ||
+      !code.trim() ||
+      (!isUsageStepped && !value.trim()) ||
+      !startsAt ||
+      !endsAt
+    ) {
       setFormError('عنوان، کد، مقدار و بازهٔ زمانی الزامی است');
+      return;
+    }
+    if (isUsageStepped && usageStageValues.some((v) => !v.trim())) {
+      setFormError('مقدار همهٔ مراحل باید مشخص باشد');
       return;
     }
 
@@ -163,9 +188,12 @@ const LoyaltyDiscountCodes = () => {
         title: title.trim(),
         code: code.trim(),
         valueType,
-        value: Number(value),
+        value: isUsageStepped ? Number(usageStageValues[0]) : Number(value),
         tierType,
-        usageType,
+        usageType: isUsageStepped ? 'MULTI_USE' : usageType,
+        tiers: isUsageStepped
+          ? usageStageValues.map((v, i) => ({ usageIndex: i + 1, value: Number(v) }))
+          : undefined,
         targetSegmentId: targetSegmentId || undefined,
         minPurchaseAmount: minPurchaseAmount.trim() ? Number(minPurchaseAmount) : undefined,
         startsAt: startOfDayIso(startsAt),
@@ -214,10 +242,24 @@ const LoyaltyDiscountCodes = () => {
     {
       key: 'value',
       title: 'مقدار',
-      render: (r) =>
-        r.discountCodeDetail?.valueType === 'PERCENTAGE'
-          ? `${r.discountCodeDetail.value}%`
-          : formatToman(r.discountCodeDetail?.value ?? 0),
+      render: (r) => {
+        const detail = r.discountCodeDetail;
+        if (!detail) return '-';
+        const suffix = detail.valueType === 'PERCENTAGE' ? '%' : ' تومان';
+        const fmt = (v: number) =>
+          detail.valueType === 'PERCENTAGE' ? `${v}%` : formatToman(v);
+        if (detail.tierType === 'USAGE_STEPPED' && detail.tiers.length) {
+          const sorted = [...detail.tiers].sort(
+            (a, b) => (a.usageIndex ?? 0) - (b.usageIndex ?? 0),
+          );
+          return (
+            <span className="text-xs">
+              {sorted.map((t) => `${t.value}${suffix}`).join(' ← ')}
+            </span>
+          );
+        }
+        return fmt(detail.value);
+      },
     },
     {
       key: 'targetSegment',
@@ -357,20 +399,22 @@ const LoyaltyDiscountCodes = () => {
                 ]}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {valueType === 'PERCENTAGE' ? 'درصد تخفیف' : 'مبلغ تخفیف (تومان)'}
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={valueType === 'PERCENTAGE' ? 100 : undefined}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zafting-accent/20 dir-ltr text-left"
-                required
-              />
-            </div>
+            {tierType !== 'USAGE_STEPPED' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {valueType === 'PERCENTAGE' ? 'درصد تخفیف' : 'مبلغ تخفیف (تومان)'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={valueType === 'PERCENTAGE' ? 100 : undefined}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zafting-accent/20 dir-ltr text-left"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -378,10 +422,15 @@ const LoyaltyDiscountCodes = () => {
               <Select
                 label="نوع پله‌بندی"
                 value={tierType}
-                onChange={(e) => setTierType(e.target.value as IncentiveTierType)}
+                onChange={(e) => {
+                  const next = e.target.value as IncentiveTierType;
+                  setTierType(next);
+                  if (next === 'USAGE_STEPPED') setUsageType('MULTI_USE');
+                }}
                 options={[
                   { label: 'ثابت (بدون پله)', value: 'FLAT' },
-                  { label: 'پلکانی', value: 'STEPPED' },
+                  { label: 'پلکانی بر اساس مبلغ سفارش', value: 'STEPPED' },
+                  { label: 'پلکانی بر اساس دفعهٔ خرید (کد چندمرحله‌ای)', value: 'USAGE_STEPPED' },
                 ]}
               />
               {tierType === 'STEPPED' && (
@@ -391,17 +440,77 @@ const LoyaltyDiscountCodes = () => {
               )}
             </div>
             <div>
-              <Select
-                label="نوع استفاده"
-                value={usageType}
-                onChange={(e) => setUsageType(e.target.value as IncentiveUsageType)}
-                options={[
-                  { label: 'یک‌بار مصرف', value: 'SINGLE_USE' },
-                  { label: 'چندبار مصرف', value: 'MULTI_USE' },
-                ]}
-              />
+              {tierType === 'USAGE_STEPPED' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    نوع استفاده
+                  </label>
+                  <p className="px-3 py-2 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                    چندبار مصرف (خودکار — به تعداد مراحل زیر)
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  label="نوع استفاده"
+                  value={usageType}
+                  onChange={(e) => setUsageType(e.target.value as IncentiveUsageType)}
+                  options={[
+                    { label: 'یک‌بار مصرف', value: 'SINGLE_USE' },
+                    { label: 'چندبار مصرف', value: 'MULTI_USE' },
+                  ]}
+                />
+              )}
             </div>
           </div>
+
+          {tierType === 'USAGE_STEPPED' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                درصد/مبلغ هر مرحلهٔ خرید (مرحلهٔ اول = اولین باری که مشتری این کد را استفاده می‌کند)
+              </label>
+              <div className="space-y-2">
+                {usageStageValues.map((v, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-20 shrink-0 text-sm text-gray-600">
+                      خرید {i + 1}‌ام
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={valueType === 'PERCENTAGE' ? 100 : undefined}
+                      value={v}
+                      onChange={(e) =>
+                        setUsageStageValues((prev) =>
+                          prev.map((p, idx) => (idx === i ? e.target.value : p)),
+                        )
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zafting-accent/20 dir-ltr text-left"
+                      required
+                    />
+                    {usageStageValues.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setUsageStageValues((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                        className="p-1 text-gray-400 hover:text-red-600"
+                        title="حذف این مرحله"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setUsageStageValues((prev) => [...prev, ''])}
+                className="mt-2 text-sm text-zafting-accent hover:underline"
+              >
+                + افزودن مرحله
+              </button>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
