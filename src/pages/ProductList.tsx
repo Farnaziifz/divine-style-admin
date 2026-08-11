@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productService, type Product } from '../services/product.service';
 import { Table, type Column } from '../components/common/Table';
-import { Plus, Loader2, Trash2, Edit2, Eye } from 'lucide-react';
+import { Plus, Loader2, Trash2, Edit2, Eye, RefreshCw } from 'lucide-react';
 import { getImageUrl } from '../utils/image';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 
@@ -15,6 +15,12 @@ const ProductList = () => {
   const [total, setTotal] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
+  const [isRecalcModalOpen, setIsRecalcModalOpen] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalcMessage, setRecalcMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -54,6 +60,25 @@ const ProductList = () => {
   const handleDeleteCancel = () => {
     setProductIdToDelete(null);
     setIsDeleteModalOpen(false);
+  };
+
+  const handleRecalculateConfirm = async () => {
+    setIsRecalcModalOpen(false);
+    setIsRecalculating(true);
+    setRecalcMessage(null);
+    try {
+      const { updatedCount } = await productService.recalculatePrices();
+      setRecalcMessage({
+        type: 'success',
+        text: `قیمت ${updatedCount.toLocaleString('fa-IR')} محصول موجود به‌روزرسانی شد.`,
+      });
+      fetchProducts();
+    } catch (error) {
+      console.error('Failed to recalculate prices:', error);
+      setRecalcMessage({ type: 'error', text: 'به‌روزرسانی قیمت‌ها با خطا مواجه شد.' });
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   const formatPrice = (value: number) =>
@@ -163,16 +188,42 @@ const ProductList = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-800">مدیریت محصولات</h1>
-        <button
-          onClick={() => navigate('create')}
-          className="flex items-center gap-2 bg-zafting-accent text-white px-4 py-2 rounded-lg hover:bg-zafting-accent/90 transition-colors"
-        >
-          <Plus size={20} />
-          <span>افزودن محصول</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsRecalcModalOpen(true)}
+            disabled={isRecalculating}
+            className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {isRecalculating ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <RefreshCw size={18} />
+            )}
+            <span>به‌روزرسانی قیمت محصولات موجود</span>
+          </button>
+          <button
+            onClick={() => navigate('create')}
+            className="flex items-center gap-2 bg-zafting-accent text-white px-4 py-2 rounded-lg hover:bg-zafting-accent/90 transition-colors"
+          >
+            <Plus size={20} />
+            <span>افزودن محصول</span>
+          </button>
+        </div>
       </div>
+
+      {recalcMessage && (
+        <div
+          className={`rounded-xl p-4 text-sm border ${
+            recalcMessage.type === 'success'
+              ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+              : 'bg-red-50 border-red-100 text-red-700'
+          }`}
+        >
+          {recalcMessage.text}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {isLoading ? (
@@ -199,6 +250,14 @@ const ProductList = () => {
         onConfirm={handleDeleteConfirm}
         title="حذف محصول"
         message="آیا از حذف این محصول اطمینان دارید؟ این عمل غیرقابل بازگشت است."
+      />
+
+      <ConfirmModal
+        isOpen={isRecalcModalOpen}
+        onClose={() => setIsRecalcModalOpen(false)}
+        onConfirm={handleRecalculateConfirm}
+        title="به‌روزرسانی قیمت محصولات موجود"
+        message="قیمت نهایی همهٔ محصولاتی که حداقل یک واریانت با موجودی دارند، بر اساس هزینه بسته‌بندی و مالیات فعلی دوباره محاسبه می‌شود. ادامه می‌دهید؟"
       />
     </div>
   );

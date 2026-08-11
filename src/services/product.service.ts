@@ -137,4 +137,9 @@ export const productService = {
     const response = await api.get('/products/out-of-stock');
     return response.data;
   },
+
+  recalculatePrices: async (): Promise<{ updatedCount: number }> => {
+    const response = await api.post('/products/recalculate-prices');
+    return response.data;
+  },
 };
