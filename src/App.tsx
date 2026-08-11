@@ -23,6 +23,7 @@ import Orders from './pages/Orders';
 import OfflineSales from './pages/OfflineSales';
 import CreateOfflineSale from './pages/CreateOfflineSale';
 import OfflineSalesReport from './pages/OfflineSalesReport';
+import SalesDetailReport from './pages/SalesDetailReport';
 import DiscountCodes from './pages/DiscountCodes';
 import OrderDetail from './pages/OrderDetail';
 import RoleManagement from './pages/RoleManagement';
@@ -116,6 +117,7 @@ function App() {
           </Route>
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:orderCode" element={<OrderDetail />} />
+          <Route path="sales/detail" element={<SalesDetailReport />} />
           <Route path="offline-sales" element={<OfflineSales />} />
           <Route path="offline-sales/create" element={<CreateOfflineSale />} />
           <Route path="offline-sales/report" element={<OfflineSalesReport />} />

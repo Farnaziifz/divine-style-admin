@@ -17,6 +17,7 @@ import {
   CalendarDays,
   Gift,
   Store,
+  FileSpreadsheet,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -71,6 +72,9 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     ] }] : []),
     ...(canSee('PRODUCTS_WRITE') ? [{ name: 'تقویم محتوا', icon: CalendarDays, path: '/content-calendar' }] : []),
     ...(canSee('ORDERS_READ') ? [{ name: 'سفارشات', icon: ShoppingBag, path: '/orders' }] : []),
+    ...(canSee('REPORTS_VIEW')
+      ? [{ name: 'ریز فروش', icon: FileSpreadsheet, path: '/sales/detail' }]
+      : []),
     ...(canSee('OFFLINE_SALES_WRITE') || canSee('OFFLINE_SALES_READ')
       ? [
           {
