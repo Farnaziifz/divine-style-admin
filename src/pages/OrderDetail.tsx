@@ -404,6 +404,21 @@ const OrderDetail = () => {
                       <div className="min-w-0">
                         <div className="font-medium text-gray-800 truncate">{it.title}</div>
                         <div className="text-xs text-gray-400 font-mono dir-ltr truncate">{it.sku}</div>
+                        {(it.color || it.size) && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {it.color && (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2 py-0.5">
+                                <span className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: it.color }} />
+                                رنگ: {it.color}
+                              </span>
+                            )}
+                            {it.size && (
+                              <span className="text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2 py-0.5">
+                                سایز: {it.size}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="text-sm text-gray-600 mt-2">تعداد: {it.quantity}</div>
                       </div>
                     </div>

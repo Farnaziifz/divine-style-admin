@@ -426,6 +426,21 @@ export const OrderDetailsModal = ({ orderCode, onClose }: OrderDetailsModalProps
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-bold text-gray-800 truncate">{item.title}</h3>
+                        {(item.color || item.size) && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {item.color && (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2 py-0.5">
+                                <span className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" style={{ backgroundColor: item.color }} />
+                                رنگ: {item.color}
+                              </span>
+                            )}
+                            {item.size && (
+                              <span className="text-xs font-medium text-gray-700 bg-gray-100 rounded-full px-2 py-0.5">
+                                سایز: {item.size}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                           <span className="font-mono">SKU: {item.sku}</span>
                           <span>تعداد: {item.quantity}</span>
