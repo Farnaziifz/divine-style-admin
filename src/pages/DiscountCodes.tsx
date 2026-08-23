@@ -7,7 +7,7 @@ import {
   type DiscountCode,
   type DiscountCodeScope,
 } from '../services/discount.service';
-import { Loader2, Plus, TicketPercent, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Plus, TicketPercent, Trash2 } from 'lucide-react';
 
 const scopeLabel = (s: DiscountCodeScope) => {
   switch (s) {
@@ -31,6 +31,7 @@ const DiscountCodes = () => {
   const [total, setTotal] = useState(0);
   const limit = 10;
   const [addOpen, setAddOpen] = useState(false);
+  const [editRow, setEditRow] = useState<DiscountCode | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -144,14 +145,24 @@ const DiscountCodes = () => {
       key: 'actions',
       title: 'عملیات',
       render: (r) => (
-        <button
-          type="button"
-          onClick={() => setDeleteId(r.id)}
-          className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-          title="حذف"
-        >
-          <Trash2 size={18} />
-        </button>
+        <div className="flex items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => setEditRow(r)}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            title="ویرایش"
+          >
+            <Pencil size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteId(r.id)}
+            className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+            title="حذف"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       ),
       className: 'text-center',
       headerClassName: 'text-center',
@@ -225,6 +236,13 @@ const DiscountCodes = () => {
       <AddDiscountModal
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
+        onSaved={() => void fetchList()}
+      />
+
+      <AddDiscountModal
+        isOpen={!!editRow}
+        discount={editRow}
+        onClose={() => setEditRow(null)}
         onSaved={() => void fetchList()}
       />
 

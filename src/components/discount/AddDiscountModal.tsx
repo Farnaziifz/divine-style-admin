@@ -5,6 +5,7 @@ import { Loader2, RefreshCw, TicketPercent } from 'lucide-react';
 import {
   discountService,
   type CreateDiscountCodeDto,
+  type DiscountCode,
   type DiscountValueType,
 } from '../../services/discount.service';
 import { SearchableUserMultiSelect } from '../common/SearchableUserMultiSelect';
@@ -38,17 +39,30 @@ function startOfTodayIso(): string {
   return d.toISOString();
 }
 
+/** تاریخ ISO را به YYYY-MM-DD محلی (همان قالبی که PersianDatePicker می‌خواد) تبدیل می‌کند */
+function isoToGregorianYmd(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 interface AddDiscountModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
+  /** وقتی مقدار داره، مودال در حالت ویرایش همین کد باز می‌شه */
+  discount?: DiscountCode | null;
 }
 
 export const AddDiscountModal = ({
   isOpen,
   onClose,
   onSaved,
+  discount,
 }: AddDiscountModalProps) => {
+  const isEditing = !!discount;
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
   const [valueType, setValueType] = useState<DiscountValueType>('PERCENT');
@@ -62,9 +76,26 @@ export const AddDiscountModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    if (discount) {
+      setTitle(discount.title ?? '');
+      setCode(discount.code);
+      setValueType(discount.valueType);
+      setUsageMode(discount.scope === 'ALL_USERS' ? 'public' : 'single_user');
+      setExpirationDate(isoToGregorianYmd(discount.validTo));
+      setValue(discount.value);
+      setMaxUses(discount.maxTotalUses != null ? String(discount.maxTotalUses) : '');
+      setUserIds(
+        discount.scope === 'SINGLE_USER'
+          ? discount.userId
+            ? [discount.userId]
+            : []
+          : (discount.eligibleUsers ?? []).map((u) => u.id),
+      );
+      return;
+    }
     setCode((c) => c || generateCode());
     setExpirationDate((d) => (d ? d : gregorianYmdAddDays(30)));
-  }, [isOpen]);
+  }, [isOpen, discount]);
 
   const preview = useMemo(() => {
     const v = Number(value) || 0;
@@ -124,15 +155,19 @@ export const AddDiscountModal = ({
       userIds: usageMode === 'single_user' ? userIds : undefined,
       valueType,
       value: Number(value),
-      validFrom: startOfTodayIso(),
+      validFrom: isEditing && discount ? discount.validFrom : startOfTodayIso(),
       validTo: endOfDayIso(expirationDate),
       maxTotalUses: maxUses.trim() === '' ? undefined : Math.max(1, Number(maxUses)),
-      isActive: true,
+      isActive: isEditing && discount ? discount.isActive : true,
     };
 
     setSaving(true);
     try {
-      await discountService.create(payload);
+      if (isEditing && discount) {
+        await discountService.update(discount.id, payload);
+      } else {
+        await discountService.create(payload);
+      }
       onSaved();
       handleClose();
     } catch (err: unknown) {
@@ -158,7 +193,7 @@ export const AddDiscountModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="افزودن کد تخفیف جدید"
+      title={isEditing ? 'ویرایش کد تخفیف' : 'افزودن کد تخفیف جدید'}
       maxWidthClassName="max-w-5xl"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -222,14 +257,16 @@ export const AddDiscountModal = ({
                   className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-zafting-accent outline-none dir-ltr text-left font-mono"
                   placeholder="CODE"
                 />
-                <button
-                  type="button"
-                  onClick={() => setCode(generateCode())}
-                  className="shrink-0 px-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-zafting-accent"
-                  title="تولید کد تصادفی"
-                >
-                  <RefreshCw size={20} />
-                </button>
+                {!isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setCode(generateCode())}
+                    className="shrink-0 px-3 rounded-xl border border-gray-200 hover:bg-gray-50 text-zafting-accent"
+                    title="تولید کد تصادفی"
+                  >
+                    <RefreshCw size={20} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -360,7 +397,7 @@ export const AddDiscountModal = ({
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-zafting-accent text-white font-bold shadow-md hover:opacity-95 disabled:opacity-60"
           >
             {saving ? <Loader2 className="animate-spin" size={20} /> : null}
-            ذخیره تخفیف
+            {isEditing ? 'ذخیره تغییرات' : 'ذخیره تخفیف'}
           </button>
         </div>
       </form>
