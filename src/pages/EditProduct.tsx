@@ -17,6 +17,7 @@ import {
 import { sizeService, type Size } from '../services/size.service';
 import { productService, type SpecificationValue } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
+import { compressImage } from '../utils/imageCompression';
 import { getImageUrl } from '../utils/image';
 import api from '../services/api';
 import {
@@ -25,7 +26,23 @@ import {
   Upload,
   Loader2,
   ArrowRight,
+  Minimize2,
+  Check,
 } from 'lucide-react';
+
+interface ImageItem {
+  id: string;
+  file: File;
+  preview: string;
+  status: 'compressing' | 'ready' | 'uploading' | 'done' | 'error';
+  progress: number;
+}
+
+interface ExistingImage {
+  url: string;
+  status: 'idle' | 'compressing' | 'uploading' | 'done' | 'already-optimized' | 'error';
+  progress: number;
+}
 
 const EditProduct = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,12 +74,10 @@ const EditProduct = () => {
   });
 
   // Form State - Media
-  // existingImages stores URLs of images already on the server
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  // newImages stores File objects for newly added images
-  const [newImages, setNewImages] = useState<File[]>([]);
-  // newImagePreviews stores data URLs for previews of new images
-  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+  // existingImages stores images already on the server
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // newMediaItems stores newly added images pending compression/upload
+  const [newMediaItems, setNewMediaItems] = useState<ImageItem[]>([]);
 
   // Form State - Variants
   const [colors, setColors] = useState<string[]>([]);
@@ -112,7 +127,9 @@ const EditProduct = () => {
       setDescription(product.description);
       setCategoryId(product.categoryId);
       setCollectionId(product.collectionIds?.[0] || '');
-      setExistingImages(product.images || []);
+      setExistingImages(
+        (product.images || []).map((url) => ({ url, status: 'idle' as const, progress: 0 })),
+      );
       setIsFeatured(product.isFeatured ?? false);
       setShowInIntro(product.showInIntro ?? false);
       setCostPrice(Number(product.costPrice) || 0);
@@ -173,27 +190,78 @@ const EditProduct = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setNewImages((prev) => [...prev, ...files]);
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    e.target.value = '';
 
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setNewImagePreviews((prev) => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
+    files.forEach((file) => {
+      const id = Math.random().toString(36).slice(2);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewMediaItems((prev) => [
+          ...prev,
+          { id, file, preview: reader.result as string, status: 'compressing', progress: 0 },
+        ]);
+
+        compressImage(file).then((compressed) => {
+          setNewMediaItems((prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, file: compressed, status: 'ready' } : item,
+            ),
+          );
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeNewImage = (id: string) => {
+    setNewMediaItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const removeExistingImage = (url: string) => {
+    setExistingImages((prev) => prev.filter((img) => img.url !== url));
+  };
+
+  const handleCompressExisting = async (url: string) => {
+    setExistingImages((prev) =>
+      prev.map((img) => (img.url === url ? { ...img, status: 'compressing', progress: 0 } : img)),
+    );
+    try {
+      const res = await api.get(url, { responseType: 'blob' });
+      const blob: Blob = res.data;
+      const filename = url.split('/').pop() || 'image.jpg';
+      const originalFile = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      const compressed = await compressImage(originalFile);
+
+      if (compressed.size >= originalFile.size) {
+        setExistingImages((prev) =>
+          prev.map((img) =>
+            img.url === url ? { ...img, status: 'already-optimized', progress: 100 } : img,
+          ),
+        );
+        return;
+      }
+
+      setExistingImages((prev) =>
+        prev.map((img) => (img.url === url ? { ...img, status: 'uploading', progress: 0 } : img)),
+      );
+      const newUrl = await uploadService.upload(compressed, (progress) => {
+        setExistingImages((prev) =>
+          prev.map((img) => (img.url === url ? { ...img, progress } : img)),
+        );
       });
+      setExistingImages((prev) =>
+        prev.map((img) =>
+          img.url === url ? { url: newUrl, status: 'done', progress: 100 } : img,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      setExistingImages((prev) =>
+        prev.map((img) => (img.url === url ? { ...img, status: 'error' } : img)),
+      );
     }
-  };
-
-  const removeNewImage = (index: number) => {
-    setNewImages((prev) => prev.filter((_, i) => i !== index));
-    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const removeExistingImage = (index: number) => {
-    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addColor = () => {
@@ -330,11 +398,32 @@ const EditProduct = () => {
     setIsSaving(true);
     try {
       // 1. Upload new images
-      const uploadPromises = newImages.map((file) => uploadService.upload(file));
-      const newUploadedUrls = await Promise.all(uploadPromises);
+      const newUploadedUrls = await Promise.all(
+        newMediaItems.map(async (item) => {
+          setNewMediaItems((prev) =>
+            prev.map((m) => (m.id === item.id ? { ...m, status: 'uploading', progress: 0 } : m)),
+          );
+          try {
+            const url = await uploadService.upload(item.file, (progress) => {
+              setNewMediaItems((prev) =>
+                prev.map((m) => (m.id === item.id ? { ...m, progress } : m)),
+              );
+            });
+            setNewMediaItems((prev) =>
+              prev.map((m) => (m.id === item.id ? { ...m, status: 'done', progress: 100 } : m)),
+            );
+            return url;
+          } catch (error) {
+            setNewMediaItems((prev) =>
+              prev.map((m) => (m.id === item.id ? { ...m, status: 'error' } : m)),
+            );
+            throw error;
+          }
+        }),
+      );
 
       // 2. Combine with existing images
-      const finalImages = [...existingImages, ...newUploadedUrls];
+      const finalImages = [...existingImages.map((img) => img.url), ...newUploadedUrls];
 
       const payload = {
         title,
@@ -569,33 +658,100 @@ const EditProduct = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             {/* Existing Images */}
-            {existingImages.map((src, i) => (
-              <div key={`existing-${i}`} className="relative group">
+            {existingImages.map((img) => (
+              <div key={img.url} className="relative group">
                 <img
-                  src={getImageUrl(src)}
-                  alt={`Existing ${i}`}
+                  src={getImageUrl(img.url)}
+                  alt="Existing"
                   className="w-full h-32 object-cover rounded-lg"
                 />
+
+                {img.status === 'compressing' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>فشرده‌سازی...</span>
+                  </div>
+                )}
+                {img.status === 'uploading' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <span className="font-bold">{img.progress}%</span>
+                    <div className="w-3/4 h-1.5 bg-white/30 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-zafting-accent transition-all"
+                        style={{ width: `${img.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {img.status === 'error' && (
+                  <div className="absolute inset-0 bg-red-500/60 rounded-lg flex items-center justify-center text-white text-xs">
+                    خطا در فشرده‌سازی
+                  </div>
+                )}
+
+                {(img.status === 'idle' || img.status === 'error') && (
+                  <button
+                    onClick={() => handleCompressExisting(img.url)}
+                    title="کاهش حجم عکس"
+                    className="absolute top-2 left-2 bg-white/90 text-gray-700 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                  >
+                    <Minimize2 size={14} />
+                  </button>
+                )}
+                {img.status === 'done' && (
+                  <span className="absolute top-2 left-2 bg-green-600 text-white p-1 rounded-full">
+                    <Check size={14} />
+                  </span>
+                )}
+
                 <button
-                  onClick={() => removeExistingImage(i)}
+                  onClick={() => removeExistingImage(img.url)}
                   className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={16} />
                 </button>
-                <span className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">قبلی</span>
+                <span className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                  {img.status === 'done'
+                    ? 'کاهش‌یافته'
+                    : img.status === 'already-optimized'
+                    ? 'بهینه بود'
+                    : 'قبلی'}
+                </span>
               </div>
             ))}
 
             {/* New Images */}
-            {newImagePreviews.map((src, i) => (
-              <div key={`new-${i}`} className="relative group">
+            {newMediaItems.map((item) => (
+              <div key={item.id} className="relative group">
                 <img
-                  src={src}
-                  alt={`New Preview ${i}`}
+                  src={item.preview}
+                  alt="New Preview"
                   className="w-full h-32 object-cover rounded-lg border-2 border-green-500"
                 />
+                {item.status === 'compressing' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>فشرده‌سازی...</span>
+                  </div>
+                )}
+                {item.status === 'uploading' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <span className="font-bold">{item.progress}%</span>
+                    <div className="w-3/4 h-1.5 bg-white/30 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-zafting-accent transition-all"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {item.status === 'error' && (
+                  <div className="absolute inset-0 bg-red-500/60 rounded-lg flex items-center justify-center text-white text-xs">
+                    خطا در آپلود
+                  </div>
+                )}
                 <button
-                  onClick={() => removeNewImage(i)}
+                  onClick={() => removeNewImage(item.id)}
                   className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={16} />
@@ -857,8 +1013,12 @@ const EditProduct = () => {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={isSaving}
-            className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+            disabled={
+              isSaving ||
+              newMediaItems.some((m) => m.status === 'compressing') ||
+              existingImages.some((img) => img.status === 'compressing' || img.status === 'uploading')
+            }
+            className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
           >
             {isSaving && <Loader2 className="animate-spin" size={20} />}
             ذخیره تغییرات

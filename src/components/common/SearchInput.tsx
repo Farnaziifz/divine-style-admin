@@ -16,6 +16,8 @@ export const SearchInput = ({
 }: SearchInputProps) => {
   const [value, setValue] = useState(initialValue);
   const isFirstRun = useRef(true);
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
 
   useEffect(() => {
     if (isFirstRun.current) {
@@ -24,11 +26,11 @@ export const SearchInput = ({
     }
 
     const timer = setTimeout(() => {
-      onSearch(value);
+      onSearchRef.current(value);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [value, onSearch]);
+  }, [value]);
 
   return (
     <div className={`relative ${className}`}>

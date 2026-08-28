@@ -18,6 +18,7 @@ import {
 import { sizeService, type Size } from '../services/size.service';
 import { productService } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
+import { compressImage } from '../utils/imageCompression';
 import api from '../services/api';
 import {
   X,
@@ -25,6 +26,14 @@ import {
   Upload,
   Loader2,
 } from 'lucide-react';
+
+interface ImageItem {
+  id: string;
+  file: File;
+  preview: string;
+  status: 'compressing' | 'ready' | 'uploading' | 'done' | 'error';
+  progress: number;
+}
 
 const SPEC_TYPES = [
   { label: 'متن', value: 'TEXT' },
@@ -93,8 +102,7 @@ const CreateProduct = () => {
   const [searchCollectionLoading, setSearchCollectionLoading] = useState(false);
   
   // Form State - Media
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [mediaItems, setMediaItems] = useState<ImageItem[]>([]);
 
   // Form State - Variants
   const [colors, setColors] = useState<string[]>([]);
@@ -280,23 +288,33 @@ const CreateProduct = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setImages((prev) => [...prev, ...files]);
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    e.target.value = '';
 
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreviews((prev) => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+    files.forEach((file) => {
+      const id = Math.random().toString(36).slice(2);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaItems((prev) => [
+          ...prev,
+          { id, file, preview: reader.result as string, status: 'compressing', progress: 0 },
+        ]);
+
+        compressImage(file).then((compressed) => {
+          setMediaItems((prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, file: compressed, status: 'ready' } : item,
+            ),
+          );
+        });
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (id: string) => {
+    setMediaItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const addColor = () => {
@@ -416,8 +434,29 @@ const CreateProduct = () => {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      const uploadPromises = images.map((file) => uploadService.upload(file));
-      const uploadedUrls = await Promise.all(uploadPromises);
+      const uploadedUrls = await Promise.all(
+        mediaItems.map(async (item) => {
+          setMediaItems((prev) =>
+            prev.map((m) => (m.id === item.id ? { ...m, status: 'uploading', progress: 0 } : m)),
+          );
+          try {
+            const url = await uploadService.upload(item.file, (progress) => {
+              setMediaItems((prev) =>
+                prev.map((m) => (m.id === item.id ? { ...m, progress } : m)),
+              );
+            });
+            setMediaItems((prev) =>
+              prev.map((m) => (m.id === item.id ? { ...m, status: 'done', progress: 100 } : m)),
+            );
+            return url;
+          } catch (error) {
+            setMediaItems((prev) =>
+              prev.map((m) => (m.id === item.id ? { ...m, status: 'error' } : m)),
+            );
+            throw error;
+          }
+        }),
+      );
 
       const payload = {
         title,
@@ -706,15 +745,37 @@ const CreateProduct = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            {imagePreviews.map((src, i) => (
-              <div key={i} className="relative group">
+            {mediaItems.map((item) => (
+              <div key={item.id} className="relative group">
                 <img
-                  src={src}
-                  alt={`Preview ${i}`}
+                  src={item.preview}
+                  alt="Preview"
                   className="w-full h-32 object-cover rounded-lg"
                 />
+                {item.status === 'compressing' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>فشرده‌سازی...</span>
+                  </div>
+                )}
+                {item.status === 'uploading' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs">
+                    <span className="font-bold">{item.progress}%</span>
+                    <div className="w-3/4 h-1.5 bg-white/30 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-zafting-accent transition-all"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {item.status === 'error' && (
+                  <div className="absolute inset-0 bg-red-500/60 rounded-lg flex items-center justify-center text-white text-xs">
+                    خطا در آپلود
+                  </div>
+                )}
                 <button
-                  onClick={() => removeImage(i)}
+                  onClick={() => removeImage(item.id)}
                   className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={16} />
@@ -978,8 +1039,8 @@ const CreateProduct = () => {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={isLoading}
-            className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+            disabled={isLoading || mediaItems.some((m) => m.status === 'compressing')}
+            className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
           >
             {isLoading && <Loader2 className="animate-spin" size={20} />}
             ثبت نهایی محصول
