@@ -1,17 +1,34 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { productService, type Product } from '../services/product.service';
+import { categoryService, type Category } from '../services/category.service';
 import { Table, type Column } from '../components/common/Table';
+import { Select } from '../components/common/Select';
 import { Plus, Loader2, Trash2, Edit2, Eye, RefreshCw } from 'lucide-react';
 import { getImageUrl } from '../utils/image';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 
+const LIMIT = 10;
+
+type SortOption = 'newest' | 'price_asc' | 'price_desc';
+
+const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+  { label: 'جدیدترین', value: 'newest' },
+  { label: 'قیمت: کم به زیاد', value: 'price_asc' },
+  { label: 'قیمت: زیاد به کم', value: 'price_desc' },
+];
+
 const ProductList = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = Number(searchParams.get('page') || '1');
+  const categoryId = searchParams.get('categoryId') || '';
+  const sort = (searchParams.get('sort') as SortOption) || 'newest';
+
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
@@ -23,13 +40,21 @@ const ProductList = () => {
   } | null>(null);
 
   useEffect(() => {
-    fetchProducts();
-  }, [page]);
+    categoryService
+      .getAll(1, 100)
+      .then((res) => setCategories(res.data))
+      .catch((error) => console.error(error));
+  }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await productService.getAll({ page, limit });
+      const response = await productService.getAll({
+        page,
+        limit: LIMIT,
+        categoryId: categoryId || undefined,
+        sort,
+      });
       setProducts(response.data);
       setTotal(response.meta.total);
     } catch (error) {
@@ -37,6 +62,26 @@ const ProductList = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [page, categoryId, sort]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const updateParams = (updates: { page?: number; categoryId?: string; sort?: SortOption }) => {
+    const next = new URLSearchParams(searchParams);
+    if (updates.categoryId !== undefined) {
+      if (updates.categoryId) next.set('categoryId', updates.categoryId);
+      else next.delete('categoryId');
+    }
+    if (updates.sort !== undefined) {
+      if (updates.sort !== 'newest') next.set('sort', updates.sort);
+      else next.delete('sort');
+    }
+    const nextPage = updates.page ?? (updates.categoryId !== undefined || updates.sort !== undefined ? 1 : page);
+    if (nextPage > 1) next.set('page', String(nextPage));
+    else next.delete('page');
+    setSearchParams(next);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -213,6 +258,28 @@ const ProductList = () => {
         </div>
       </div>
 
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="w-56">
+          <Select
+            placeholder="همه دسته‌بندی‌ها"
+            value={categoryId}
+            onChange={(e) => updateParams({ categoryId: String(e.target.value) })}
+            options={[
+              { label: 'همه دسته‌بندی‌ها', value: '' },
+              ...categories.map((c) => ({ label: c.title, value: c.id })),
+            ]}
+          />
+        </div>
+        <div className="w-56">
+          <Select
+            placeholder="مرتب‌سازی"
+            value={sort}
+            onChange={(e) => updateParams({ sort: e.target.value as SortOption })}
+            options={SORT_OPTIONS}
+          />
+        </div>
+      </div>
+
       {recalcMessage && (
         <div
           className={`rounded-xl p-4 text-sm border ${
@@ -236,9 +303,9 @@ const ProductList = () => {
             columns={columns}
             pagination={{
               page,
-              limit,
+              limit: LIMIT,
               total,
-              onPageChange: (p) => setPage(p),
+              onPageChange: (p) => updateParams({ page: p }),
             }}
           />
         )}
