@@ -8,6 +8,7 @@ import {
 } from '../services/category.service';
 import { Select } from '../components/common/Select';
 import { getImageUrl } from '../utils/image';
+import { compressImage } from '../utils/imageCompression';
 import {
   Plus,
   Edit2,
@@ -35,6 +36,7 @@ const Categories = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
   const [codeStart, setCodeStart] = useState<string>('');
   const [profitMultiplier, setProfitMultiplier] = useState<string>('1');
   // اگر برای این دسته‌بندی محصولی کد گرفته باشد، nextCode بزرگ‌تر از codeStart است — دیگر نباید codeStart را عوض کرد
@@ -137,15 +139,20 @@ const Categories = () => {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+    if (!file) return;
+    setIsCompressingImage(true);
+    try {
+      const compressed = await compressImage(file);
+      setImageFile(compressed);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressed);
+    } finally {
+      setIsCompressingImage(false);
     }
   };
 
@@ -385,11 +392,11 @@ const Categories = () => {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || isCompressingImage}
               className="px-4 py-2 bg-zafting-accent text-white rounded-lg hover:bg-zafting-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isSaving && <Loader2 className="animate-spin" size={16} />}
-              {editingId ? 'ویرایش' : 'ایجاد'}
+              {(isSaving || isCompressingImage) && <Loader2 className="animate-spin" size={16} />}
+              {isCompressingImage ? 'در حال فشرده‌سازی...' : editingId ? 'ویرایش' : 'ایجاد'}
             </button>
           </div>
         </form>
