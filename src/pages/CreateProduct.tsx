@@ -171,9 +171,12 @@ const CreateProduct = () => {
   const priceBreakdown = (() => {
     const profitMultiplier = Number(selectedCategory?.profitMultiplier ?? 1);
     const afterProfit = costPrice * profitMultiplier;
-    const afterPackaging = afterProfit + pricingSettings.packagingCost;
-    const finalPrice = Math.round(afterPackaging * (1 + pricingSettings.taxPercent / 100));
-    return { profitMultiplier, afterProfit, afterPackaging, finalPrice };
+    const finalPrice = Math.round(afterProfit * (1 + pricingSettings.taxPercent / 100));
+    const discountedPrice =
+      discountPercent != null && discountPercent > 0
+        ? Math.round(afterProfit * (1 - discountPercent / 100))
+        : null;
+    return { profitMultiplier, afterProfit, finalPrice, discountedPrice };
   })();
   const previewFinalPrice = priceBreakdown.finalPrice;
 
@@ -599,10 +602,6 @@ const CreateProduct = () => {
                   <span className="font-medium text-gray-800">{formatPriceWithSeparator(priceBreakdown.afterProfit, false)} تومان</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>+ هزینه بسته‌بندی ({formatPriceWithSeparator(pricingSettings.packagingCost, false)})</span>
-                  <span className="font-medium text-gray-800">{formatPriceWithSeparator(priceBreakdown.afterPackaging, false)} تومان</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
                   <span>× مالیات ({pricingSettings.taxPercent}٪)</span>
                   <span className="font-medium text-gray-800">{formatPriceWithSeparator(previewFinalPrice, false)} تومان</span>
                 </div>
@@ -610,7 +609,15 @@ const CreateProduct = () => {
                   <span className="font-bold text-gray-800">قیمت نهایی (پیش‌نمایش)</span>
                   <span className="font-bold text-zafting-accent">{formatPriceWithSeparator(previewFinalPrice, false)} تومان</span>
                 </div>
-                <p className="text-xs text-gray-400 pt-1">محاسبهٔ قطعی هنگام ذخیره روی سرور انجام می‌شود.</p>
+                {priceBreakdown.discountedPrice != null && (
+                  <div className="flex justify-between pt-1.5 mt-1.5 border-t border-gray-200 border-dashed">
+                    <span className="text-emerald-700">قیمت با تخفیف ({discountPercent}٪ روی هزینه+سود، بدون مالیات)</span>
+                    <span className="font-bold text-emerald-700">{formatPriceWithSeparator(priceBreakdown.discountedPrice, false)} تومان</span>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 pt-1">
+                  هزینه بسته‌بندی ({formatPriceWithSeparator(pricingSettings.packagingCost, false)} تومان) رو این قیمت نمی‌آید — یک‌بار به ازای کل سفارش در چک‌اوت اضافه می‌شود. محاسبهٔ قطعی هنگام ذخیره روی سرور انجام می‌شود.
+                </p>
               </div>
             </div>
 
