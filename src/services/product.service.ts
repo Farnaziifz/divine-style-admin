@@ -40,6 +40,7 @@ export interface Product {
   variants?: ProductVariant[];
   isFeatured?: boolean;
   showInIntro?: boolean;
+  showInRack?: boolean;
   /** کد خودکار محصول (بر اساس بازهٔ کد دسته‌بندی) */
   code: number;
   /** بهای تمام‌شدهٔ خالص (ورودی ادمین) */
@@ -64,6 +65,7 @@ export interface ProductUpsertPayload {
   variants?: ProductVariant[];
   isFeatured?: boolean;
   showInIntro?: boolean;
+  showInRack?: boolean;
   costPrice: number;
   discountPrice?: number;
   discountPercent?: number;

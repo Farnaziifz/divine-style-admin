@@ -66,6 +66,7 @@ const EditProduct = () => {
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
   const [isFeatured, setIsFeatured] = useState(false);
   const [showInIntro, setShowInIntro] = useState(false);
+  const [showInRack, setShowInRack] = useState(false);
 
   // تنظیمات سراسری قیمت‌گذاری (برای پیش‌نمایش قیمت نهایی، محاسبهٔ قطعی همیشه سمت سرور است)
   const [pricingSettings, setPricingSettings] = useState<{ packagingCost: number; taxPercent: number }>({
@@ -132,6 +133,7 @@ const EditProduct = () => {
       );
       setIsFeatured(product.isFeatured ?? false);
       setShowInIntro(product.showInIntro ?? false);
+      setShowInRack(product.showInRack ?? false);
       setCostPrice(Number(product.costPrice) || 0);
       setDiscountPercent(
         typeof product.discountPercent === 'number' ? product.discountPercent : undefined,
@@ -433,6 +435,7 @@ const EditProduct = () => {
         images: finalImages,
         isFeatured,
         showInIntro,
+        showInRack,
         costPrice,
         discountPercent,
         variants: variants.map((v) => {
@@ -444,9 +447,9 @@ const EditProduct = () => {
 
       await productService.update(id, payload);
       navigate('/products');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('خطا در ویرایش محصول');
+      alert(error?.response?.data?.message || 'خطا در ویرایش محصول');
     } finally {
       setIsSaving(false);
     }
@@ -604,6 +607,17 @@ const EditProduct = () => {
                   className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
                 />
                 <span className="text-sm font-medium text-gray-700">نمایش در اینترو</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showInRack}
+                  onChange={(e) => setShowInRack(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  نمایش در رگال دسته‌بندی (حداکثر ۷ محصول)
+                </span>
               </label>
             </div>
 

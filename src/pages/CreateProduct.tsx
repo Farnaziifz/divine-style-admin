@@ -82,6 +82,7 @@ const CreateProduct = () => {
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
   const [isFeatured, setIsFeatured] = useState(false);
   const [showInIntro, setShowInIntro] = useState(false);
+  const [showInRack, setShowInRack] = useState(false);
 
   // تنظیمات سراسری قیمت‌گذاری (برای پیش‌نمایش قیمت نهایی، محاسبهٔ قطعی همیشه سمت سرور است)
   const [pricingSettings, setPricingSettings] = useState<{ packagingCost: number; taxPercent: number }>({
@@ -466,6 +467,7 @@ const CreateProduct = () => {
         images: uploadedUrls,
         isFeatured,
         showInIntro,
+        showInRack,
         costPrice,
         discountPercent,
         variants: variants.map((v) => {
@@ -477,9 +479,9 @@ const CreateProduct = () => {
 
       await productService.create(payload);
       navigate('/products');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('خطا در ایجاد محصول');
+      alert(error?.response?.data?.message || 'خطا در ایجاد محصول');
     } finally {
       setIsLoading(false);
     }
@@ -628,6 +630,17 @@ const CreateProduct = () => {
                   className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
                 />
                 <span className="text-sm font-medium text-gray-700">نمایش در اینترو</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showInRack}
+                  onChange={(e) => setShowInRack(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-zafting-accent focus:ring-zafting-accent"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  نمایش در رگال دسته‌بندی (حداکثر ۷ محصول)
+                </span>
               </label>
             </div>
 
