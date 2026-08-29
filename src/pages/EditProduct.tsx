@@ -366,11 +366,14 @@ const EditProduct = () => {
   }, [colors, sizes, isLoading]);
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
-  const previewFinalPrice = (() => {
+  const priceBreakdown = (() => {
     const profitMultiplier = Number(selectedCategory?.profitMultiplier ?? 1);
-    const base = (costPrice + pricingSettings.packagingCost) * profitMultiplier;
-    return Math.round(base * (1 + pricingSettings.taxPercent / 100));
+    const afterProfit = costPrice * profitMultiplier;
+    const afterPackaging = afterProfit + pricingSettings.packagingCost;
+    const finalPrice = Math.round(afterPackaging * (1 + pricingSettings.taxPercent / 100));
+    return { profitMultiplier, afterProfit, afterPackaging, finalPrice };
   })();
+  const previewFinalPrice = priceBreakdown.finalPrice;
 
   const updateVariant = (
     id: string,
@@ -563,13 +566,29 @@ const EditProduct = () => {
                 onChange={(e) => setCostPrice(Number(e.target.value))}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
               />
-              <p className="text-xs text-gray-500 mt-2">
-                قیمت نهایی محاسبه‌شده (پیش‌نمایش):{' '}
-                <span className="font-bold text-gray-700">
-                  {previewFinalPrice.toLocaleString()} تومان
-                </span>{' '}
-                — بر اساس هزینه بسته‌بندی، مالیات و ضریب سود دسته‌بندی انتخاب‌شده. محاسبهٔ قطعی هنگام ذخیره روی سرور انجام می‌شود.
-              </p>
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm space-y-1.5">
+                <div className="flex justify-between text-gray-600">
+                  <span>هزینه تمام‌شده</span>
+                  <span className="font-medium text-gray-800">{costPrice.toLocaleString()} تومان</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>× ضریب سود ({priceBreakdown.profitMultiplier})</span>
+                  <span className="font-medium text-gray-800">{priceBreakdown.afterProfit.toLocaleString()} تومان</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>+ هزینه بسته‌بندی ({pricingSettings.packagingCost.toLocaleString()})</span>
+                  <span className="font-medium text-gray-800">{priceBreakdown.afterPackaging.toLocaleString()} تومان</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>× مالیات ({pricingSettings.taxPercent}٪)</span>
+                  <span className="font-medium text-gray-800">{previewFinalPrice.toLocaleString()} تومان</span>
+                </div>
+                <div className="flex justify-between pt-1.5 mt-1.5 border-t border-gray-200">
+                  <span className="font-bold text-gray-800">قیمت نهایی (پیش‌نمایش)</span>
+                  <span className="font-bold text-zafting-accent">{previewFinalPrice.toLocaleString()} تومان</span>
+                </div>
+                <p className="text-xs text-gray-400 pt-1">محاسبهٔ قطعی هنگام ذخیره روی سرور انجام می‌شود.</p>
+              </div>
             </div>
 
             <div>
