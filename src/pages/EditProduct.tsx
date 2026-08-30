@@ -137,7 +137,7 @@ const EditProduct = () => {
       setShowInRack(product.showInRack ?? false);
       setCostPrice(Number(product.costPrice) || 0);
       setProfitMultiplier(
-        typeof product.profitMultiplier === 'number' ? product.profitMultiplier : undefined,
+        product.profitMultiplier != null ? Number(product.profitMultiplier) : undefined,
       );
       setDiscountPercent(
         typeof product.discountPercent === 'number' ? product.discountPercent : undefined,
