@@ -79,6 +79,7 @@ const CreateProduct = () => {
   const [categoryId, setCategoryId] = useState('');
   const [collectionId, setCollectionId] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
+  const [profitMultiplier, setProfitMultiplier] = useState<number | undefined>(undefined);
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
   const [isFeatured, setIsFeatured] = useState(false);
   const [showInIntro, setShowInIntro] = useState(false);
@@ -168,15 +169,25 @@ const CreateProduct = () => {
   };
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
+
+  // اولین بار که دسته‌بندی انتخاب می‌شود، ضریب سود آن به‌عنوان مقدار پیش‌فرض اولیه پیشنهاد می‌شود؛
+  // بعد از آن مقدار کاملاً مستقل و قابل‌ویرایش برای همین محصول است
+  useEffect(() => {
+    if (selectedCategory && profitMultiplier === undefined) {
+      setProfitMultiplier(Number(selectedCategory.profitMultiplier));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]);
+
   const priceBreakdown = (() => {
-    const profitMultiplier = Number(selectedCategory?.profitMultiplier ?? 1);
-    const afterProfit = costPrice * profitMultiplier;
+    const effectiveProfitMultiplier = Number(profitMultiplier ?? selectedCategory?.profitMultiplier ?? 1);
+    const afterProfit = costPrice * effectiveProfitMultiplier;
     const finalPrice = Math.round(afterProfit * (1 + pricingSettings.taxPercent / 100));
     const discountedPrice =
       discountPercent != null && discountPercent > 0
         ? Math.round(afterProfit * (1 - discountPercent / 100))
         : null;
-    return { profitMultiplier, afterProfit, finalPrice, discountedPrice };
+    return { profitMultiplier: effectiveProfitMultiplier, afterProfit, finalPrice, discountedPrice };
   })();
   const previewFinalPrice = priceBreakdown.finalPrice;
 
@@ -475,6 +486,7 @@ const CreateProduct = () => {
         showInIntro,
         showInRack,
         costPrice,
+        profitMultiplier,
         discountPercent,
         variants: variants.map((v) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -592,6 +604,25 @@ const CreateProduct = () => {
                 placeholder="مثال: ۴۰٬۰۰۰٬۰۰۰"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
               />
+
+              <label className="block text-sm font-bold text-gray-700 mb-2 mt-4">
+                ضریب سود این محصول
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={profitMultiplier ?? ''}
+                onChange={(e) =>
+                  setProfitMultiplier(e.target.value === '' ? undefined : Number(e.target.value))
+                }
+                placeholder="مثلاً ۲.۵"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                وقتی دسته‌بندی را انتخاب کنی، ضریب سود آن به‌عنوان مقدار پیش‌فرض پیشنهاد می‌شود؛ می‌توانی برای این محصول تغییرش بدهی.
+              </p>
+
               <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm space-y-1.5">
                 <div className="flex justify-between text-gray-600">
                   <span>هزینه تمام‌شده</span>

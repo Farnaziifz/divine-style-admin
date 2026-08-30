@@ -45,6 +45,8 @@ export interface Product {
   code: number;
   /** بهای تمام‌شدهٔ خالص (ورودی ادمین) */
   costPrice: number;
+  /** ضریب سود این محصول (مستقل از دسته‌بندی) */
+  profitMultiplier: number;
   /** قیمت نهایی محاسبه‌شده از فرمول */
   finalPrice: number;
   /** تخفیف دستی روی قیمت نهایی */
@@ -67,6 +69,7 @@ export interface ProductUpsertPayload {
   showInIntro?: boolean;
   showInRack?: boolean;
   costPrice: number;
+  profitMultiplier?: number;
   discountPrice?: number;
   discountPercent?: number;
 }
