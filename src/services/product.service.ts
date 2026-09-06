@@ -52,6 +52,8 @@ export interface Product {
   /** تخفیف دستی روی قیمت نهایی */
   discountPrice?: number;
   discountPercent?: number;
+  /** گارانتی محصول (برای فید ترب) */
+  guarantee?: string;
   /** اولین باری که این محصول توی شبکه‌های اجتماعی پست شد (از تقویم محتوایی) */
   contentPostedAt?: string | null;
   createdAt: string;
@@ -72,6 +74,7 @@ export interface ProductUpsertPayload {
   profitMultiplier?: number;
   discountPrice?: number;
   discountPercent?: number;
+  guarantee?: string;
 }
 
 export interface PaginationMeta {

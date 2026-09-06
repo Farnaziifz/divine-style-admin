@@ -62,6 +62,7 @@ const EditProduct = () => {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [collectionId, setCollectionId] = useState('');
+  const [guarantee, setGuarantee] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
   const [profitMultiplier, setProfitMultiplier] = useState<number | undefined>(undefined);
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
@@ -127,6 +128,7 @@ const EditProduct = () => {
       // Populate Form
       setTitle(product.title);
       setDescription(product.description);
+      setGuarantee(product.guarantee ?? '');
       setCategoryId(product.categoryId);
       setCollectionId(product.collectionIds?.[0] || '');
       setExistingImages(
@@ -446,6 +448,7 @@ const EditProduct = () => {
         isFeatured,
         showInIntro,
         showInRack,
+        guarantee: guarantee.trim() || undefined,
         costPrice,
         profitMultiplier,
         discountPercent,
@@ -561,6 +564,19 @@ const EditProduct = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              گارانتی (برای فید ترب)
+            </label>
+            <input
+              type="text"
+              value={guarantee}
+              onChange={(e) => setGuarantee(e.target.value)}
+              placeholder="مثال: ۱۲ ماه گارانتی اصالت و سلامت کالا"
+              maxLength={200}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
             />
           </div>

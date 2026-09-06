@@ -25,6 +25,8 @@ import CreateOfflineSale from './pages/CreateOfflineSale';
 import OfflineSalesReport from './pages/OfflineSalesReport';
 import SalesDetailReport from './pages/SalesDetailReport';
 import DiscountCodes from './pages/DiscountCodes';
+import ReferralCodes from './pages/ReferralCodes';
+import WalletWithdrawals from './pages/WalletWithdrawals';
 import OrderDetail from './pages/OrderDetail';
 import RoleManagement from './pages/RoleManagement';
 import ContentCalendar from './pages/ContentCalendar';
@@ -122,6 +124,8 @@ function App() {
           <Route path="offline-sales/create" element={<CreateOfflineSale />} />
           <Route path="offline-sales/report" element={<OfflineSalesReport />} />
           <Route path="discount-codes" element={<DiscountCodes />} />
+          <Route path="referral-codes" element={<ReferralCodes />} />
+          <Route path="wallet-withdrawals" element={<WalletWithdrawals />} />
           <Route path="content-calendar" element={<ContentCalendar />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
