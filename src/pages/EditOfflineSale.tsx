@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Loader2, Plus, Search, X } from 'lucide-react';
 import { Select } from '../components/common/Select';
 import { PersianDatePicker } from '../components/common/PersianDatePicker';
@@ -22,6 +22,16 @@ const onlyDigits = (value: string) => value.replace(/[^0-9]/g, '');
 const formatPrice = (value?: number) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
   return new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
+};
+
+/** میلادی ISO → YYYY-MM-DD برای PersianDatePicker */
+const isoToGregorianYmd = (iso: string) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return gregorianYmdToday();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
 
 interface SaleItemRow extends CreateOfflineSaleItemPayload {
@@ -137,8 +147,12 @@ function ProductSearchField({
   );
 }
 
-const CreateOfflineSale = () => {
+const EditOfflineSale = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [channel, setChannel] = useState('');
   const [commissionPercent, setCommissionPercent] = useState('');
@@ -155,6 +169,48 @@ const CreateOfflineSale = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+    offlineSaleService
+      .getById(id)
+      .then((sale) => {
+        if (cancelled) return;
+        setChannel(sale.channel);
+        setCommissionPercent(
+          sale.commissionPercent != null ? String(Number(sale.commissionPercent)) : '',
+        );
+        setDiscountAmount(String(Math.round(Number(sale.discountAmount) || 0)));
+        setNote(sale.note ?? '');
+        setSoldAt(isoToGregorianYmd(sale.soldAt));
+        setItems(
+          sale.items.map((item) => ({
+            key: item.id,
+            productId: item.productId,
+            productVariantId: item.productVariantId,
+            title: item.title,
+            variantLabel: item.sku,
+            quantity: item.quantity,
+            unitPrice: Number(item.unitPrice),
+          })),
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError('خطا در دریافت فروش');
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const handlePickProduct = (product: Product) => {
     setPickedProduct(product);
@@ -209,6 +265,7 @@ const CreateOfflineSale = () => {
   }, [items, discountAmount, commissionPercent]);
 
   const handleSubmit = async () => {
+    if (!id) return;
     setError(null);
     if (!channel.trim()) {
       setError('محل فروش را وارد کنید');
@@ -225,7 +282,7 @@ const CreateOfflineSale = () => {
 
     setIsSubmitting(true);
     try {
-      await offlineSaleService.create({
+      await offlineSaleService.update(id, {
         channel: channel.trim(),
         commissionPercent: commissionPercent ? Number(commissionPercent) : undefined,
         discountAmount: discountAmount ? Number(discountAmount) : undefined,
@@ -244,16 +301,32 @@ const CreateOfflineSale = () => {
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
           ?.message;
       setError(
-        Array.isArray(message) ? message.join('، ') : message || 'خطا در ثبت فروش',
+        Array.isArray(message) ? message.join('، ') : message || 'خطا در ذخیره تغییرات',
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center bg-white rounded-xl shadow-sm border border-gray-100">
+        <Loader2 className="animate-spin text-zafting-accent" size={32} />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-red-50 border border-red-100 text-red-700 rounded-xl p-4 text-sm">
+        {loadError}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-20">
-      <h1 className="text-2xl font-bold text-[#2A2A2A]">ثبت فروش حضوری / اینستا</h1>
+      <h1 className="text-2xl font-bold text-[#2A2A2A]">ویرایش فروش حضوری / اینستا</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-700 rounded-xl p-4 text-sm">
@@ -454,11 +527,11 @@ const CreateOfflineSale = () => {
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zafting-accent text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-60"
         >
           {isSubmitting && <Loader2 className="animate-spin" size={18} />}
-          ثبت فروش
+          ذخیره تغییرات
         </button>
       </div>
     </div>
   );
 };
 
-export default CreateOfflineSale;
+export default EditOfflineSale;

@@ -7,13 +7,6 @@ import { Modal } from '../components/common/Modal';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { offlineSaleService, type OfflineSale } from '../services/offlineSale.service';
 
-const toDatetimeLocalValue = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
 const formatPrice = (value?: string | number | null) => {
   if (value == null) return '-';
   const num = typeof value === 'number' ? value : Number(value);
@@ -42,11 +35,6 @@ const OfflineSales = () => {
   const [saleToDelete, setSaleToDelete] = useState<OfflineSale | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [saleToEditDate, setSaleToEditDate] = useState<OfflineSale | null>(null);
-  const [editDateValue, setEditDateValue] = useState('');
-  const [isSavingDate, setIsSavingDate] = useState(false);
-  const [editDateError, setEditDateError] = useState<string | null>(null);
-
   const fetchSales = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -67,31 +55,6 @@ const OfflineSales = () => {
   useEffect(() => {
     fetchSales();
   }, [fetchSales]);
-
-  const openEditDate = (sale: OfflineSale) => {
-    setSaleToEditDate(sale);
-    setEditDateValue(toDatetimeLocalValue(sale.soldAt));
-    setEditDateError(null);
-  };
-
-  const handleSaveDate = async () => {
-    if (!saleToEditDate || !editDateValue) return;
-    setIsSavingDate(true);
-    setEditDateError(null);
-    try {
-      await offlineSaleService.updateSoldAt(
-        saleToEditDate.id,
-        new Date(editDateValue).toISOString(),
-      );
-      setSaleToEditDate(null);
-      fetchSales();
-    } catch (error) {
-      console.error('Failed to update offline sale date', error);
-      setEditDateError('خطا در ذخیره تاریخ');
-    } finally {
-      setIsSavingDate(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!saleToDelete) return;
@@ -137,17 +100,14 @@ const OfflineSales = () => {
           >
             جزئیات
           </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              openEditDate(s);
-            }}
+          <Link
+            to={`/offline-sales/${s.id}/edit`}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-            aria-label="ویرایش تاریخ"
+            aria-label="ویرایش فروش"
           >
             <Pencil size={16} />
-          </button>
+          </Link>
           <button
             type="button"
             onClick={(e) => {
@@ -282,50 +242,6 @@ const OfflineSales = () => {
             </div>
           </div>
         )}
-      </Modal>
-
-      <Modal
-        isOpen={!!saleToEditDate}
-        onClose={() => setSaleToEditDate(null)}
-        title="ویرایش تاریخ فروش"
-        maxWidthClassName="max-w-sm"
-      >
-        <div className="space-y-4">
-          {editDateError && (
-            <div className="bg-red-50 border border-red-100 text-red-700 rounded-xl p-3 text-sm">
-              {editDateError}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              تاریخ و ساعت فروش
-            </label>
-            <input
-              type="datetime-local"
-              value={editDateValue}
-              onChange={(e) => setEditDateValue(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setSaleToEditDate(null)}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
-            >
-              انصراف
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveDate}
-              disabled={isSavingDate || !editDateValue}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zafting-accent text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {isSavingDate && <Loader2 className="animate-spin" size={16} />}
-              ذخیره
-            </button>
-          </div>
-        </div>
       </Modal>
 
       <ConfirmModal

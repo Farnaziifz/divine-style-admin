@@ -82,9 +82,14 @@ const Dashboard = () => {
     const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     return { from: from.toISOString(), to: to.toISOString() };
   }, [now]);
+  const allTimeRange = useMemo(
+    () => ({ from: new Date(0).toISOString(), to: now.toISOString() }),
+    [now],
+  );
 
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [combinedSummary, setCombinedSummary] = useState<CombinedSummary | null>(null);
+  const [allTimeSummary, setAllTimeSummary] = useState<CombinedSummary | null>(null);
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,14 +105,18 @@ const Dashboard = () => {
     Promise.all([
       api.get<SalesSummary>('/admin/reports/sales/summary', { params: range }),
       api.get<CombinedSummary>('/admin/reports/sales/combined-summary', { params: range }),
+      api.get<CombinedSummary>('/admin/reports/sales/combined-summary', {
+        params: allTimeRange,
+      }),
       api.get<{ data: TopProductRow[] }>('/admin/reports/sales/top-products', {
         params: { ...range, limit: 5 },
       }),
     ])
-      .then(([summaryRes, combinedRes, topRes]) => {
+      .then(([summaryRes, combinedRes, allTimeRes, topRes]) => {
         if (cancelled) return;
         setSummary(summaryRes.data);
         setCombinedSummary(combinedRes.data);
+        setAllTimeSummary(allTimeRes.data);
         setTopProducts(topRes.data.data ?? []);
       })
       .catch(() => {
@@ -115,6 +124,7 @@ const Dashboard = () => {
         setError('خطا در دریافت گزارش فروش');
         setSummary(null);
         setCombinedSummary(null);
+        setAllTimeSummary(null);
         setTopProducts([]);
       })
       .finally(() => {
@@ -125,7 +135,7 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [range, allTimeRange]);
 
   const currentJalali = useMemo(() => getCurrentJalaliYearMonth(), []);
   const jalaliYearOptions = useMemo(
@@ -248,6 +258,30 @@ const Dashboard = () => {
               </h3>
               <p className="text-3xl font-bold text-zafting-accent">
                 {formatNumber(summary?.itemsCount)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-linear-to-l from-zafting-accent/10 to-emerald-700/10 p-6 rounded-xl shadow-sm border border-zafting-accent/10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-medium text-zafting-text mb-2">
+                کل فروش از ابتدا تا کنون (سایت + حضوری/اینستا)
+              </h3>
+              <p className="text-3xl font-bold text-zafting-accent">
+                {formatToman(allTimeSummary?.total.payableAmount)}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                تعداد کل فروش: {formatNumber(allTimeSummary?.total.count)}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-zafting-text mb-2">سود خالص کل از ابتدا</h3>
+              <p className="text-3xl font-bold text-emerald-700">
+                {formatToman(allTimeSummary?.total.netProfit)}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                سایت: {formatToman(allTimeSummary?.online.netProfit)} · حضوری/اینستا:{' '}
+                {formatToman(allTimeSummary?.offline.netProfit)}
               </p>
             </div>
           </div>

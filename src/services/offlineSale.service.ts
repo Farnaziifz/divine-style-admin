@@ -81,8 +81,8 @@ export const offlineSaleService = {
     await api.delete(`/admin/offline-sales/${id}`);
   },
 
-  updateSoldAt: async (id: string, soldAt: string): Promise<OfflineSale> => {
-    const response = await api.patch(`/admin/offline-sales/${id}/date`, { soldAt });
+  update: async (id: string, data: CreateOfflineSalePayload): Promise<OfflineSale> => {
+    const response = await api.patch(`/admin/offline-sales/${id}`, data);
     return response.data;
   },
 };
