@@ -54,6 +54,14 @@ type MonthlyJalaliRow = {
 };
 type MonthlyJalaliResponse = { year: number; data: MonthlyJalaliRow[] };
 
+type ChannelSummary = { count: number; payableAmount: string; netProfit: string };
+type CombinedSummary = {
+  range: { from: string; to: string };
+  online: ChannelSummary;
+  offline: ChannelSummary;
+  total: ChannelSummary;
+};
+
 const formatToman = (value: string | number | null | undefined) => {
   if (value == null) return '-';
   const num = typeof value === 'number' ? value : Number(value);
@@ -76,6 +84,7 @@ const Dashboard = () => {
   }, [now]);
 
   const [summary, setSummary] = useState<SalesSummary | null>(null);
+  const [combinedSummary, setCombinedSummary] = useState<CombinedSummary | null>(null);
   const [topProducts, setTopProducts] = useState<TopProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,19 +99,22 @@ const Dashboard = () => {
 
     Promise.all([
       api.get<SalesSummary>('/admin/reports/sales/summary', { params: range }),
+      api.get<CombinedSummary>('/admin/reports/sales/combined-summary', { params: range }),
       api.get<{ data: TopProductRow[] }>('/admin/reports/sales/top-products', {
         params: { ...range, limit: 5 },
       }),
     ])
-      .then(([summaryRes, topRes]) => {
+      .then(([summaryRes, combinedRes, topRes]) => {
         if (cancelled) return;
         setSummary(summaryRes.data);
+        setCombinedSummary(combinedRes.data);
         setTopProducts(topRes.data.data ?? []);
       })
       .catch(() => {
         if (cancelled) return;
         setError('خطا در دریافت گزارش فروش');
         setSummary(null);
+        setCombinedSummary(null);
         setTopProducts([]);
       })
       .finally(() => {
@@ -199,25 +211,25 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white/60 p-6 rounded-xl shadow-sm border border-zafting-accent/10">
               <h3 className="text-lg font-medium text-zafting-text mb-2">
-                فروش ۳۰ روز اخیر
+                فروش کل ۳۰ روز اخیر (سایت + حضوری/اینستا)
               </h3>
               <p className="text-3xl font-bold text-zafting-accent">
-                {formatToman(summary?.payableAmount)}
+                {formatToman(combinedSummary?.total.payableAmount)}
               </p>
               <p className="mt-2 text-xs text-gray-500">
-                میانگین هر سفارش: {formatToman(summary?.averageOrderValue)}
+                میانگین هر سفارش سایت: {formatToman(summary?.averageOrderValue)}
               </p>
             </div>
 
             <div className="bg-white/60 p-6 rounded-xl shadow-sm border border-zafting-accent/10">
               <h3 className="text-lg font-medium text-zafting-text mb-2">
-                سود خالص ۳۰ روز اخیر
+                سود خالص کل ۳۰ روز اخیر
               </h3>
               <p className="text-3xl font-bold text-emerald-700">
-                {formatToman(summary?.netProfit)}
+                {formatToman(combinedSummary?.total.netProfit)}
               </p>
               <p className="mt-2 text-xs text-gray-500">
-                پس از کسر بهای کالا، بسته‌بندی و هزینه ارسال
+                پس از کسر بهای کالا، بسته‌بندی، هزینه ارسال و کمیسیون فروش حضوری
               </p>
             </div>
 
@@ -237,6 +249,36 @@ const Dashboard = () => {
               <p className="text-3xl font-bold text-zafting-accent">
                 {formatNumber(summary?.itemsCount)}
               </p>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-white/60 rounded-xl shadow-sm border border-zafting-accent/10 overflow-hidden">
+            <div className="p-5 border-b border-zafting-accent/10">
+              <h2 className="text-lg font-bold text-zafting-text">
+                تفکیک فروش سایت از حضوری/اینستا (۳۰ روز اخیر)
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-gray-100">
+              <div className="p-5">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">سایت</h3>
+                <p className="text-2xl font-bold text-zafting-accent">
+                  {formatToman(combinedSummary?.online.payableAmount)}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  تعداد سفارش: {formatNumber(combinedSummary?.online.count)} · سود خالص:{' '}
+                  {formatToman(combinedSummary?.online.netProfit)}
+                </p>
+              </div>
+              <div className="p-5">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">حضوری / اینستا</h3>
+                <p className="text-2xl font-bold text-zafting-accent">
+                  {formatToman(combinedSummary?.offline.payableAmount)}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  تعداد فروش: {formatNumber(combinedSummary?.offline.count)} · سود خالص:{' '}
+                  {formatToman(combinedSummary?.offline.netProfit)}
+                </p>
+              </div>
             </div>
           </div>
 

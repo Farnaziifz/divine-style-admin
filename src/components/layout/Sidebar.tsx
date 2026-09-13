@@ -20,6 +20,7 @@ import {
   FileSpreadsheet,
   Share2,
   Banknote,
+  PartyPopper,
 } from 'lucide-react';
 import logo from '../../assets/images/logo.svg';
 
@@ -92,6 +93,7 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
         ]
       : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای تخفیف', icon: TicketPercent, path: '/discount-codes' }] : []),
+    ...(canSee('EVENTS_WRITE') ? [{ name: 'رویدادها', icon: PartyPopper, path: '/events' }] : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'کدهای ریفرال', icon: Share2, path: '/referral-codes' }] : []),
     ...(canSee('DISCOUNTS_WRITE') ? [{ name: 'درخواست‌های برداشت', icon: Banknote, path: '/wallet-withdrawals' }] : []),
     ...(canSee('USERS_MANAGE')

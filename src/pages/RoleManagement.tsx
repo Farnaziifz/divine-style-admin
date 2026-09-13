@@ -19,6 +19,7 @@ const permissionOptions: PermissionOption[] = [
   { key: 'REPORTS_VIEW', label: 'مشاهده گزارش‌های فروش' },
   { key: 'PRODUCTS_WRITE', label: 'مدیریت محصولات' },
   { key: 'DISCOUNTS_WRITE', label: 'مدیریت کدهای تخفیف' },
+  { key: 'EVENTS_WRITE', label: 'مدیریت رویدادها' },
   { key: 'USERS_MANAGE', label: 'مدیریت کاربران و نقش‌ها' },
   { key: 'SITE_SETTINGS_MANAGE', label: 'تنظیمات سایت' },
   { key: 'CHAT_MANAGE', label: 'گفتگوها' },

@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: https://api.d-style.ir
+        VITE_EVENT_LANDING_BASE_URL: https://landing.d-style.ir
     ports:
       - "5173:80"
 
