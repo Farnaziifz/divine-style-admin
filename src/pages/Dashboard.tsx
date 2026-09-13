@@ -36,7 +36,14 @@ type TopProductRow = {
   revenue: string;
 };
 
-type DailyJalaliRow = { day: number; ordersCount: number; payableAmount: number };
+type DailyJalaliRow = {
+  day: number;
+  ordersCount: number;
+  salesCount: number;
+  onlinePayableAmount: number;
+  offlinePayableAmount: number;
+  payableAmount: number;
+};
 type DailyJalaliResponse = {
   year: number;
   month: number;
@@ -160,7 +167,7 @@ const Dashboard = () => {
     setDailyError(null);
     try {
       const { data } = await api.get<DailyJalaliResponse>(
-        '/admin/reports/sales/daily-jalali',
+        '/admin/reports/sales/combined-daily-jalali',
         { params: { year, month } },
       );
       setDailyReport(data);
@@ -423,13 +430,29 @@ const Dashboard = () => {
                         />
                         <Tooltip
                           formatter={(value: any, name: any) =>
-                            name === 'payableAmount'
-                              ? [formatToman(value), 'فروش']
-                              : [formatNumber(value), 'تعداد سفارش']
+                            name === 'onlinePayableAmount'
+                              ? [formatToman(value), 'فروش سایت']
+                              : [formatToman(value), 'فروش حضوری/اینستا']
                           }
                           labelFormatter={(day) => `روز ${formatNumber(Number(day))}`}
                         />
-                        <Bar dataKey="payableAmount" fill="#b08968" radius={[4, 4, 0, 0]} />
+                        <Legend
+                          formatter={(value) =>
+                            value === 'onlinePayableAmount' ? 'سایت' : 'حضوری/اینستا'
+                          }
+                        />
+                        <Bar
+                          dataKey="onlinePayableAmount"
+                          stackId="sales"
+                          fill="#7c9885"
+                          radius={[0, 0, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="offlinePayableAmount"
+                          stackId="sales"
+                          fill="#b08968"
+                          radius={[4, 4, 0, 0]}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
