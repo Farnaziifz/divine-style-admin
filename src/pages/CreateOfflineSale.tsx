@@ -10,6 +10,18 @@ import {
 
 const DEBOUNCE_MS = 350;
 
+const toDatetimeLocalValue = (date: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatThousands = (digits: string) => {
+  if (!digits) return '';
+  return new Intl.NumberFormat('en-US').format(Number(digits));
+};
+
+const onlyDigits = (value: string) => value.replace(/[^0-9]/g, '');
+
 const formatPrice = (value?: number) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
   return new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
@@ -135,6 +147,7 @@ const CreateOfflineSale = () => {
   const [commissionPercent, setCommissionPercent] = useState('');
   const [discountAmount, setDiscountAmount] = useState('');
   const [note, setNote] = useState('');
+  const [soldAt, setSoldAt] = useState(() => toDatetimeLocalValue(new Date()));
 
   const [items, setItems] = useState<SaleItemRow[]>([]);
 
@@ -208,6 +221,10 @@ const CreateOfflineSale = () => {
       setError('حداقل یک محصول به فروش اضافه کنید');
       return;
     }
+    if (!soldAt) {
+      setError('تاریخ فروش را وارد کنید');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -216,6 +233,7 @@ const CreateOfflineSale = () => {
         commissionPercent: commissionPercent ? Number(commissionPercent) : undefined,
         discountAmount: discountAmount ? Number(discountAmount) : undefined,
         note: note.trim() || undefined,
+        soldAt: new Date(soldAt).toISOString(),
         items: items.map(({ productId, productVariantId, quantity: qty, unitPrice: price }) => ({
           productId,
           productVariantId,
@@ -360,6 +378,15 @@ const CreateOfflineSale = () => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">تاریخ و ساعت فروش</label>
+            <input
+              type="datetime-local"
+              value={soldAt}
+              onChange={(e) => setSoldAt(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               درصد کمیسیون محل فروش (اختیاری)
             </label>
@@ -378,10 +405,11 @@ const CreateOfflineSale = () => {
               مبلغ تخفیف (تومان، اختیاری)
             </label>
             <input
-              type="number"
-              min={0}
-              value={discountAmount}
-              onChange={(e) => setDiscountAmount(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={formatThousands(discountAmount)}
+              onChange={(e) => setDiscountAmount(onlyDigits(e.target.value))}
+              placeholder="0"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
             />
           </div>

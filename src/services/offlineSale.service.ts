@@ -7,21 +7,21 @@ export interface OfflineSaleItem {
   sku: string;
   title: string;
   quantity: number;
-  unitPrice: number;
-  unitCostPrice: number;
+  unitPrice: string;
+  unitCostPrice: string;
   createdAt: string;
 }
 
 export interface OfflineSale {
   id: string;
   channel: string;
-  commissionPercent: number | null;
-  discountAmount: number;
-  totalAmount: number;
-  commissionAmount: number;
-  payableAmount: number;
-  netAmount: number;
-  costOfGoods: number;
+  commissionPercent: string | null;
+  discountAmount: string;
+  totalAmount: string;
+  commissionAmount: string;
+  payableAmount: string;
+  netAmount: string;
+  costOfGoods: string;
   note: string | null;
   soldAt: string;
   createdAt: string;
@@ -79,5 +79,10 @@ export const offlineSaleService = {
 
   remove: async (id: string): Promise<void> => {
     await api.delete(`/admin/offline-sales/${id}`);
+  },
+
+  updateSoldAt: async (id: string, soldAt: string): Promise<OfflineSale> => {
+    const response = await api.patch(`/admin/offline-sales/${id}/date`, { soldAt });
+    return response.data;
   },
 };
