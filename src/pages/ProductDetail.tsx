@@ -181,6 +181,20 @@ const ProductDetail = () => {
                     </p>
                   </div>
                 )}
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">شبکه‌های اجتماعی</p>
+                  <p className="mt-1">
+                    {product.contentPostedAt ? (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        پست شده
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                        پست نشده
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
 
               <div>
