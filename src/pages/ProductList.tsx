@@ -4,7 +4,7 @@ import { productService, type Product } from '../services/product.service';
 import { categoryService, type Category } from '../services/category.service';
 import { Table, type Column } from '../components/common/Table';
 import { Select } from '../components/common/Select';
-import { Plus, Loader2, Trash2, Edit2, Eye, RefreshCw } from 'lucide-react';
+import { Plus, Loader2, Trash2, Edit2, Eye, RefreshCw, Check, AlertCircle } from 'lucide-react';
 import { getImageUrl } from '../utils/image';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 
@@ -38,6 +38,9 @@ const ProductList = () => {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
+  const [savingVariantIds, setSavingVariantIds] = useState<Set<string>>(new Set());
+  const [stockErrors, setStockErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     categoryService
@@ -129,6 +132,53 @@ const ProductList = () => {
   const formatPrice = (value: number) =>
     value.toLocaleString('fa-IR', { maximumFractionDigits: 0 });
 
+  const clearMapEntry = (map: Record<string, string>, key: string): Record<string, string> => {
+    const next = { ...map };
+    delete next[key];
+    return next;
+  };
+
+  const handleStockSave = async (productId: string, variantId: string, currentStock: number) => {
+    const draft = stockDrafts[variantId];
+    if (draft === undefined) return;
+    const nextStock = Number(draft);
+    if (!Number.isFinite(nextStock) || nextStock < 0 || Math.trunc(nextStock) !== nextStock) {
+      setStockErrors((prev) => ({ ...prev, [variantId]: 'عدد صحیح و مثبت وارد کن' }));
+      return;
+    }
+    if (nextStock === currentStock) {
+      setStockDrafts((prev) => clearMapEntry(prev, variantId));
+      return;
+    }
+    setStockErrors((prev) => clearMapEntry(prev, variantId));
+    setSavingVariantIds((prev) => new Set(prev).add(variantId));
+    try {
+      await productService.updateVariantStock(productId, variantId, nextStock);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id !== productId
+            ? p
+            : {
+                ...p,
+                variants: (p.variants ?? []).map((v) =>
+                  v.id === variantId ? { ...v, stock: nextStock } : v,
+                ),
+              },
+        ),
+      );
+      setStockDrafts((prev) => clearMapEntry(prev, variantId));
+    } catch (error) {
+      console.error('Failed to update variant stock:', error);
+      setStockErrors((prev) => ({ ...prev, [variantId]: 'ذخیره نشد، دوباره امتحان کن' }));
+    } finally {
+      setSavingVariantIds((prev) => {
+        const next = new Set(prev);
+        next.delete(variantId);
+        return next;
+      });
+    }
+  };
+
   const columns: Column<Product>[] = [
     {
       key: 'code',
@@ -185,6 +235,62 @@ const ProductList = () => {
       render: (item) => (
         <span className="font-medium">{formatPrice(Number(item.finalPrice))}</span>
       ),
+    },
+    {
+      key: 'stock',
+      title: 'موجودی',
+      render: (item) => {
+        const activeVariants = (item.variants ?? []).filter((v) => !v.isDeleted);
+        if (activeVariants.length === 0) {
+          return <span className="text-gray-400 text-sm">بدون واریانت</span>;
+        }
+        return (
+          <div className="flex flex-col gap-1.5 min-w-36">
+            {activeVariants.map((v) => {
+              const variantId = v.id ?? v.sku;
+              const label = [v.size, v.color].filter(Boolean).join(' / ') || 'پیش‌فرض';
+              const isSaving = savingVariantIds.has(variantId);
+              const error = stockErrors[variantId];
+              const value = stockDrafts[variantId] ?? String(v.stock);
+              return (
+                <div key={variantId} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 truncate max-w-20" title={label}>
+                    {label}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={value}
+                    disabled={isSaving || !v.id}
+                    onChange={(e) =>
+                      setStockDrafts((prev) => ({ ...prev, [variantId]: e.target.value }))
+                    }
+                    onBlur={() => v.id && handleStockSave(item.id, v.id, v.stock)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
+                    className={`w-16 px-2 py-1 rounded-lg border text-sm outline-none ${
+                      error
+                        ? 'border-red-300 focus:border-red-400'
+                        : 'border-gray-200 focus:border-[#6B5B54]'
+                    } ${v.stock === 0 ? 'text-red-600' : ''}`}
+                  />
+                  {isSaving ? (
+                    <Loader2 size={14} className="animate-spin text-gray-400" />
+                  ) : error ? (
+                    <span title={error}>
+                      <AlertCircle size={14} className="text-red-500" />
+                    </span>
+                  ) : (
+                    <Check size={14} className="text-transparent" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
     },
     {
       key: 'contentPostedAt',

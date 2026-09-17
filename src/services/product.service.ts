@@ -15,6 +15,8 @@ export interface ProductVariant {
   price?: number;
   discountPrice?: number;
   discountPercent?: number;
+  /** فقط در پاسخ API — واریانت soft-delete شده رو تو UI فیلتر کن */
+  isDeleted?: boolean;
 }
 
 export interface Category {
@@ -54,6 +56,10 @@ export interface Product {
   discountPercent?: number;
   /** گارانتی محصول (برای فید ترب) */
   guarantee?: string;
+  /** تیتر سئو — اگر خالی باشد، فرانت از نام محصول استفاده می‌کند */
+  metaTitle?: string;
+  /** توضیحات متا برای موتورهای جستجو */
+  metaDescription?: string;
   /** اولین باری که این محصول توی شبکه‌های اجتماعی پست شد (از تقویم محتوایی) */
   contentPostedAt?: string | null;
   createdAt: string;
@@ -75,6 +81,8 @@ export interface ProductUpsertPayload {
   discountPrice?: number;
   discountPercent?: number;
   guarantee?: string;
+  metaTitle?: string;
+  metaDescription?: string;
 }
 
 export interface PaginationMeta {
@@ -148,6 +156,18 @@ export const productService = {
 
   recalculatePrices: async (): Promise<{ updatedCount: number }> => {
     const response = await api.post('/products/recalculate-prices');
+    return response.data;
+  },
+
+  updateVariantStock: async (
+    productId: string,
+    variantId: string,
+    stock: number,
+  ): Promise<ProductVariant> => {
+    const response = await api.patch(
+      `/products/${productId}/variants/${variantId}/stock`,
+      { stock },
+    );
     return response.data;
   },
 };

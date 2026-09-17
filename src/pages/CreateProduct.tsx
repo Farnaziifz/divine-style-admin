@@ -79,6 +79,8 @@ const CreateProduct = () => {
   const [categoryId, setCategoryId] = useState('');
   const [collectionId, setCollectionId] = useState('');
   const [guarantee, setGuarantee] = useState('');
+  const [metaTitle, setMetaTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
   const [profitMultiplier, setProfitMultiplier] = useState<number | undefined>(undefined);
   const [discountPercent, setDiscountPercent] = useState<number | undefined>(undefined);
@@ -487,6 +489,8 @@ const CreateProduct = () => {
         showInIntro,
         showInRack,
         guarantee: guarantee.trim() || undefined,
+        metaTitle: metaTitle.trim() || undefined,
+        metaDescription: metaDescription.trim() || undefined,
         costPrice,
         profitMultiplier,
         discountPercent,
@@ -607,6 +611,39 @@ const CreateProduct = () => {
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
             />
           </div>
+
+          <div className="rounded-xl border border-gray-200 p-4 space-y-4">
+            <p className="text-sm font-bold text-gray-700">سئو (اختیاری)</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                تیتر سئو
+              </label>
+              <input
+                type="text"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder="اگر خالی بماند، از نام محصول استفاده می‌شود"
+                maxLength={70}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">{metaTitle.length}/۷۰ کاراکتر</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                توضیحات متا
+              </label>
+              <textarea
+                value={metaDescription}
+                onChange={(e) => setMetaDescription(e.target.value)}
+                rows={2}
+                placeholder="متنی که زیر لینک محصول تو نتایج گوگل نشون داده می‌شه"
+                maxLength={300}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#6B5B54] outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">{metaDescription.length}/۳۰۰ کاراکتر</p>
+            </div>
+          </div>
+
            <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 قیمت تمام‌شده خالص (هزینه خرید، تومان)
