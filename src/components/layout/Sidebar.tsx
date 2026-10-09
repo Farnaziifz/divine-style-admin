@@ -65,7 +65,17 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
     (currentRole.role === 'OPERATOR' && currentRole.permissions.includes(permission));
 
   const menuItems = [
-    { name: 'داشبورد', icon: LayoutDashboard, path: '/' },
+    canSee('REPORTS_VIEW')
+      ? {
+          name: 'داشبورد',
+          icon: LayoutDashboard,
+          path: '/dashboard-menu',
+          children: [
+            { name: 'داشبورد', path: '/' },
+            { name: 'گزارش فروش ماهانه', path: '/sales/monthly' },
+          ],
+        }
+      : { name: 'داشبورد', icon: LayoutDashboard, path: '/' },
     ...(canSee('PRODUCTS_WRITE') ? [{ name: 'محصولات', icon: Package, path: '/products', children: [
       { name: 'لیست محصولات', path: '/products' },
       { name: 'کالکشن‌ها', path: '/products/collections' },
@@ -178,7 +188,9 @@ const Sidebar = ({ mobileOpen = false, onNavigate }: SidebarProps) => {
             const Icon = item.icon;
             const hasChildren = item.children && item.children.length > 0;
             const matchesChild = hasChildren
-              ? item.children!.some((c) => location.pathname.startsWith(c.path))
+              ? item.children!.some((c) =>
+                  c.path === '/' ? location.pathname === '/' : location.pathname.startsWith(c.path),
+                )
               : false;
             const isSubmenuOpen = openSubmenus.includes(item.path) || matchesChild;
             const isActive =

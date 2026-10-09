@@ -25,6 +25,7 @@ import CreateOfflineSale from './pages/CreateOfflineSale';
 import EditOfflineSale from './pages/EditOfflineSale';
 import OfflineSalesReport from './pages/OfflineSalesReport';
 import SalesDetailReport from './pages/SalesDetailReport';
+import MonthlySalesReport from './pages/MonthlySalesReport';
 import DiscountCodes from './pages/DiscountCodes';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
@@ -123,6 +124,7 @@ function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:orderCode" element={<OrderDetail />} />
           <Route path="sales/detail" element={<SalesDetailReport />} />
+          <Route path="sales/monthly" element={<MonthlySalesReport />} />
           <Route path="offline-sales" element={<OfflineSales />} />
           <Route path="offline-sales/create" element={<CreateOfflineSale />} />
           <Route path="offline-sales/:id/edit" element={<EditOfflineSale />} />
