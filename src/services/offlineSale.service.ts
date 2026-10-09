@@ -26,6 +26,7 @@ export interface OfflineSale {
   soldAt: string;
   createdAt: string;
   updatedAt: string;
+  customer?: { mobile: string; name: string | null } | null;
   items: OfflineSaleItem[];
 }
 
@@ -52,6 +53,9 @@ export interface CreateOfflineSalePayload {
   discountAmount?: number;
   note?: string;
   soldAt?: string;
+  customerMobile?: string;
+  customerName?: string;
+  sendSms?: boolean;
   items: CreateOfflineSaleItemPayload[];
 }
 

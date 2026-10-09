@@ -187,6 +187,15 @@ const OfflineSales = () => {
                   {formatDateTime(selectedSale.soldAt)}
                 </span>
               </div>
+              {selectedSale.customer && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">خریدار: </span>
+                  <span className="font-medium text-gray-900">
+                    {selectedSale.customer.name ? `${selectedSale.customer.name} — ` : ''}
+                    <span dir="ltr">{selectedSale.customer.mobile}</span>
+                  </span>
+                </div>
+              )}
               {selectedSale.note && (
                 <div className="col-span-2">
                   <span className="text-gray-500">یادداشت: </span>

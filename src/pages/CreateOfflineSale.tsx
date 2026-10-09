@@ -19,6 +19,12 @@ const formatThousands = (digits: string) => {
 
 const onlyDigits = (value: string) => value.replace(/[^0-9]/g, '');
 
+/** ارقام فارسی/عربی را به لاتین تبدیل می‌کند تا شماره موبایل درست اعتبارسنجی شود */
+const toLatinDigits = (value: string) =>
+  value
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+
 const formatPrice = (value?: number) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
   return new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
@@ -144,6 +150,9 @@ const CreateOfflineSale = () => {
   const [commissionPercent, setCommissionPercent] = useState('');
   const [discountAmount, setDiscountAmount] = useState('');
   const [note, setNote] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [sendSms, setSendSms] = useState(true);
   const [soldAt, setSoldAt] = useState(() => gregorianYmdToday());
 
   const [items, setItems] = useState<SaleItemRow[]>([]);
@@ -222,6 +231,11 @@ const CreateOfflineSale = () => {
       setError('تاریخ فروش را وارد کنید');
       return;
     }
+    const mobile = onlyDigits(toLatinDigits(customerMobile));
+    if (mobile && !/^09\d{9}$/.test(mobile)) {
+      setError('شماره موبایل خریدار باید ۱۱ رقم و با ۰۹ شروع شود');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -230,6 +244,9 @@ const CreateOfflineSale = () => {
         commissionPercent: commissionPercent ? Number(commissionPercent) : undefined,
         discountAmount: discountAmount ? Number(discountAmount) : undefined,
         note: note.trim() || undefined,
+        customerMobile: mobile || undefined,
+        customerName: mobile ? customerName.trim() || undefined : undefined,
+        sendSms: mobile ? sendSms : undefined,
         soldAt: new Date(`${soldAt}T12:00:00`).toISOString(),
         items: items.map(({ productId, productVariantId, quantity: qty, unitPrice: price }) => ({
           productId,
@@ -417,6 +434,56 @@ const CreateOfflineSale = () => {
             />
           </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+        <div>
+          <h2 className="font-bold text-gray-800">خریدار (اختیاری)</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            با وارد کردن شماره موبایل، برای خریدار حساب کاربری ساخته می‌شود (اگر نداشته باشد) و
+            این خرید در شمارش خریدهایش حساب می‌شود. پیامک تشکر می‌گوید این چندمین خریدش بوده و
+            تخفیف خرید بعدی (خرید دوم ۱۵٪، سوم ۲۰٪) در سایت خودکار اعمال می‌شود.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">شماره موبایل</label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              dir="ltr"
+              maxLength={11}
+              value={customerMobile}
+              onChange={(e) => setCustomerMobile(onlyDigits(toLatinDigits(e.target.value)))}
+              placeholder="09123456789"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent text-left"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              نام خریدار (برای متن پیامک)
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              disabled={!customerMobile}
+              placeholder="مثلاً: سارا"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent disabled:bg-gray-50"
+            />
+          </div>
+        </div>
+        {customerMobile && (
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendSms}
+              onChange={(e) => setSendSms(e.target.checked)}
+              className="h-4 w-4 accent-zafting-accent"
+            />
+            بعد از ثبت، پیامک تشکر برای این شماره ارسال شود
+          </label>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-2">
