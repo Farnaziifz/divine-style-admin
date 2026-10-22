@@ -22,6 +22,12 @@ export interface UpdateUserDto {
   nationalCode?: string;
 }
 
+export interface CreateUserPayload {
+  mobile: string;
+  name?: string;
+  lastName?: string;
+}
+
 export interface UserAddress {
   id: string;
   province: string;
@@ -108,6 +114,11 @@ export const userService = {
     if (filters?.excludeAdmin) params.excludeAdmin = true;
 
     const response = await api.get('/user/list', { params });
+    return response.data;
+  },
+
+  createUser: async (data: CreateUserPayload): Promise<UserProfile> => {
+    const response = await api.post('/user', data);
     return response.data;
   },
 
