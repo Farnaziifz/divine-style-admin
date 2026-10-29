@@ -7,6 +7,7 @@ import {
   type Event,
 } from '../services/event.service';
 import { AddEventModal } from '../components/event/AddEventModal';
+import { EventPaymentsSection } from '../components/event/EventPaymentsSection';
 import { getImageUrl } from '../utils/image';
 import {
   ArrowRight,
@@ -226,6 +227,8 @@ const EventDetail = () => {
           </button>
         </div>
       </div>
+
+      <EventPaymentsSection eventId={event.id} />
 
       <AddEventModal
         isOpen={editOpen}

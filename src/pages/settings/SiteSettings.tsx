@@ -111,6 +111,11 @@ const SiteSettings = () => {
   const [pricingSaving, setPricingSaving] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
 
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState('');
+  const [freeShippingLoading, setFreeShippingLoading] = useState(false);
+  const [freeShippingSaving, setFreeShippingSaving] = useState(false);
+  const [freeShippingError, setFreeShippingError] = useState<string | null>(null);
+
   const fetchShippingMethods = useCallback(async () => {
     setShippingLoading(true);
     setShippingError(null);
@@ -201,13 +206,36 @@ const SiteSettings = () => {
     }
   }, []);
 
+  const fetchFreeShippingSettings = useCallback(async () => {
+    setFreeShippingLoading(true);
+    setFreeShippingError(null);
+    try {
+      const { data } = await api.get<{ threshold: number }>(
+        '/site-settings/free-shipping',
+      );
+      setFreeShippingThreshold(String(data.threshold ?? 0));
+    } catch {
+      setFreeShippingError('خطا در دریافت تنظیمات ارسال رایگان');
+    } finally {
+      setFreeShippingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!canManageSiteSettings(auth)) return;
     if (activeTab !== 'general') return;
     fetchOtpProvider();
     fetchPaymentProviders();
     fetchPricingSettings();
-  }, [activeTab, auth, fetchOtpProvider, fetchPaymentProviders, fetchPricingSettings]);
+    fetchFreeShippingSettings();
+  }, [
+    activeTab,
+    auth,
+    fetchOtpProvider,
+    fetchPaymentProviders,
+    fetchPricingSettings,
+    fetchFreeShippingSettings,
+  ]);
 
   if (!canManageSiteSettings(auth)) {
     return (
@@ -743,6 +771,69 @@ const SiteSettings = () => {
                   className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {pricingSaving ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : null}
+                  ذخیره
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
+            <div>
+              <h3 className="font-bold text-[#2A2A2A]">ارسال رایگان</h3>
+              <p className="text-sm text-gray-600 mt-2 leading-7">
+                اگر مجموع سبد خرید (قبل از تخفیف) از این مبلغ بیشتر یا مساوی شود، هزینهٔ
+                ارسال صفر می‌شود و مشتری فقط روش ارسال را انتخاب می‌کند. برای غیرفعال کردن،
+                مقدار را ۰ بگذارید.
+              </p>
+            </div>
+
+            {freeShippingError ? (
+              <div className="mt-4 text-sm text-red-600">{freeShippingError}</div>
+            ) : null}
+
+            {freeShippingLoading ? (
+              <div className="mt-6 flex items-center text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span className="ms-2 text-sm">در حال دریافت...</span>
+              </div>
+            ) : (
+              <div className="mt-6 flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    حداقل مجموع سبد برای ارسال رایگان (تومان)
+                  </label>
+                  <input
+                    value={freeShippingThreshold}
+                    onChange={(e) => setFreeShippingThreshold(e.target.value)}
+                    inputMode="numeric"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-zafting-accent"
+                    placeholder="مثال: 2000000 (۰ = غیرفعال)"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={freeShippingSaving}
+                  onClick={async () => {
+                    const parsed = parsePriceInput(freeShippingThreshold) ?? 0;
+                    setFreeShippingSaving(true);
+                    setFreeShippingError(null);
+                    try {
+                      await api.patch('/site-settings/free-shipping', {
+                        threshold: parsed,
+                      });
+                      setFreeShippingThreshold(String(parsed));
+                    } catch {
+                      setFreeShippingError('خطا در ذخیره تنظیمات ارسال رایگان');
+                    } finally {
+                      setFreeShippingSaving(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zafting-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {freeShippingSaving ? (
                     <Loader2 className="animate-spin" size={18} />
                   ) : null}
                   ذخیره

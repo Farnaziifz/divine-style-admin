@@ -87,3 +87,53 @@ export const eventService = {
     return response.data;
   },
 };
+
+export interface EventPaymentItem {
+  id: string;
+  productId: string;
+  productVariantId: string;
+  sku: string;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface EventPaymentRow {
+  id: string;
+  amount: number;
+  refId: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+  user: { mobile: string; name: string | null };
+  items: EventPaymentItem[];
+  isAssigned: boolean;
+}
+
+export interface AssignPaymentItemPayload {
+  productId: string;
+  productVariantId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export const eventPaymentAdminService = {
+  list: async (
+    eventId: string,
+    params: { page?: number; limit?: number; unassignedOnly?: boolean } = {},
+  ): Promise<{
+    data: EventPaymentRow[];
+    meta: { total: number; page: number; limit: number; lastPage: number };
+  }> => {
+    const response = await api.get(`/events/${eventId}/payments`, { params });
+    return response.data;
+  },
+
+  assignItems: async (
+    eventId: string,
+    paymentId: string,
+    items: AssignPaymentItemPayload[],
+  ): Promise<EventPaymentRow> => {
+    const response = await api.put(`/events/${eventId}/payments/${paymentId}/items`, { items });
+    return response.data;
+  },
+};
