@@ -98,8 +98,11 @@ export interface EventPaymentItem {
   unitPrice: number;
 }
 
+export type EventPaymentStatus = 'INITIATED' | 'PAID' | 'FAILED';
+
 export interface EventPaymentRow {
   id: string;
+  status: EventPaymentStatus;
   amount: number;
   refId: string | null;
   verifiedAt: string | null;
@@ -119,7 +122,12 @@ export interface AssignPaymentItemPayload {
 export const eventPaymentAdminService = {
   list: async (
     eventId: string,
-    params: { page?: number; limit?: number; unassignedOnly?: boolean } = {},
+    params: {
+      page?: number;
+      limit?: number;
+      status?: EventPaymentStatus;
+      unassignedOnly?: boolean;
+    } = {},
   ): Promise<{
     data: EventPaymentRow[];
     meta: { total: number; page: number; limit: number; lastPage: number };

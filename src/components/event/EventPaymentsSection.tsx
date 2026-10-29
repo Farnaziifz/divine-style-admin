@@ -7,9 +7,26 @@ import type { Product } from '../../services/product.service';
 import {
   eventPaymentAdminService,
   type EventPaymentRow,
+  type EventPaymentStatus,
 } from '../../services/event.service';
 
 const PAGE_SIZE = 20;
+
+type PaymentFilter = 'ALL' | EventPaymentStatus | 'UNASSIGNED';
+
+const FILTER_OPTIONS: { value: PaymentFilter; label: string }[] = [
+  { value: 'ALL', label: 'همه تراکنش‌ها' },
+  { value: 'PAID', label: 'موفق' },
+  { value: 'UNASSIGNED', label: 'موفق و تعیین‌تکلیف‌نشده' },
+  { value: 'FAILED', label: 'ناموفق' },
+  { value: 'INITIATED', label: 'در انتظار پرداخت' },
+];
+
+const STATUS_BADGE: Record<EventPaymentStatus, { label: string; className: string }> = {
+  PAID: { label: 'موفق', className: 'bg-green-100 text-green-700' },
+  FAILED: { label: 'ناموفق', className: 'bg-red-100 text-red-700' },
+  INITIATED: { label: 'در انتظار پرداخت', className: 'bg-gray-100 text-gray-600' },
+};
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('fa-IR').format(Math.round(value)) + ' تومان';
@@ -314,7 +331,7 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [filter, setFilter] = useState<PaymentFilter>('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<EventPaymentRow | null>(null);
@@ -326,7 +343,8 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
       const res = await eventPaymentAdminService.list(eventId, {
         page,
         limit: PAGE_SIZE,
-        unassignedOnly: unassignedOnly || undefined,
+        status: filter === 'ALL' || filter === 'UNASSIGNED' ? undefined : filter,
+        unassignedOnly: filter === 'UNASSIGNED' || undefined,
       });
       setRows(res.data);
       setLastPage(res.meta.lastPage);
@@ -337,7 +355,7 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [eventId, page, unassignedOnly]);
+  }, [eventId, page, filter]);
 
   useEffect(() => {
     void load();
@@ -348,21 +366,23 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-bold text-zafting-text flex items-center gap-2">
           <Receipt size={18} className="text-zafting-accent" />
-          پرداخت‌های ایونت
+          تراکنش‌های ایونت
           <span className="text-xs font-normal text-gray-400">({total})</span>
         </h3>
-        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={unassignedOnly}
-            onChange={(e) => {
-              setUnassignedOnly(e.target.checked);
-              setPage(1);
-            }}
-            className="h-4 w-4 accent-zafting-accent"
-          />
-          فقط تعیین‌تکلیف‌نشده‌ها
-        </label>
+        <select
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value as PaymentFilter);
+            setPage(1);
+          }}
+          className="px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-zafting-accent bg-white"
+        >
+          {FILTER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -380,6 +400,7 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
               <tr>
                 <th className="px-3 py-2 text-right">خریدار</th>
                 <th className="px-3 py-2 text-right">مبلغ</th>
+                <th className="px-3 py-2 text-right">وضعیت</th>
                 <th className="px-3 py-2 text-right">زمان</th>
                 <th className="px-3 py-2 text-right">اقلام</th>
                 <th className="px-3 py-2" />
@@ -395,7 +416,16 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
                     {p.user.name && <div className="text-xs text-gray-400">{p.user.name}</div>}
                   </td>
                   <td className="px-3 py-2 font-medium">{formatPrice(p.amount)}</td>
-                  <td className="px-3 py-2 text-gray-600">{formatDateTime(p.verifiedAt)}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded-full ${STATUS_BADGE[p.status].className}`}
+                    >
+                      {STATUS_BADGE[p.status].label}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-gray-600">
+                    {formatDateTime(p.verifiedAt ?? p.createdAt)}
+                  </td>
                   <td className="px-3 py-2">
                     {p.isAssigned ? (
                       <div className="space-y-0.5">
@@ -409,21 +439,25 @@ export function EventPaymentsSection({ eventId }: { eventId: string }) {
                           </div>
                         ))}
                       </div>
-                    ) : (
+                    ) : p.status === 'PAID' ? (
                       <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">
                         تعیین تکلیف نشده
                       </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-left">
-                    <button
-                      type="button"
-                      onClick={() => setActive(p)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-zafting-accent bg-zafting-accent/10 hover:bg-zafting-accent/20"
-                    >
-                      {p.isAssigned && <Check size={14} />}
-                      {p.isAssigned ? 'ویرایش' : 'تعیین تکلیف'}
-                    </button>
+                    {p.status === 'PAID' && (
+                      <button
+                        type="button"
+                        onClick={() => setActive(p)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-zafting-accent bg-zafting-accent/10 hover:bg-zafting-accent/20"
+                      >
+                        {p.isAssigned && <Check size={14} />}
+                        {p.isAssigned ? 'ویرایش' : 'تعیین تکلیف'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
