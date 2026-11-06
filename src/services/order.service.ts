@@ -16,6 +16,7 @@ export interface Order {
   discountCode?: string | null;
   discountAmount?: number;
   shippingCost?: number;
+  packagingCost?: number;
   shippingMethodId?: string | null;
   shippingMethodTitle?: string | null;
   shippingMethodPrice?: number | null;
@@ -39,6 +40,8 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   unitDiscountPrice: number | null;
+  /** بهای تمام‌شدهٔ واحد (اسنپ‌شات لحظهٔ سفارش) — فقط برای ادمین/اپراتور */
+  costPrice?: number;
   imageUrl?: string | null;
   createdAt: string;
 }
@@ -66,7 +69,34 @@ export interface OrderComment {
   createdAt: string;
 }
 
+export interface OrderFinancials {
+  itemsQuantity: number;
+  costOfGoods: number;
+  packagingCostForProfit: number;
+  netProfit: number;
+  walletApplied: number;
+}
+
+export interface OrderMoneySnapshot {
+  totalAmount: number;
+  discountAmount: number;
+  shippingCost: number;
+  packagingCost: number;
+  walletApplied: number;
+  payableAmount: number;
+}
+
+/** نتیجهٔ ویرایش/حذف: اثر مالی و مبالغی که باید دستی به مشتری برگردد */
+export interface OrderChangeImpact {
+  previous: OrderMoneySnapshot;
+  current: OrderMoneySnapshot;
+  gatewayRefundDue: number;
+  walletRefundDue: number;
+  warnings: string[];
+}
+
 export interface OrderDetails extends Order {
+  financials?: OrderFinancials;
   shippingAddress?: unknown;
   paidAt?: string | null;
   items: OrderItem[];
@@ -121,5 +151,44 @@ export const orderService = {
       },
     );
     return response.data as OrderComment;
+  },
+  updateOrder: async (
+    orderCode: string,
+    data: { discountAmount?: number; shippingCost?: number; packagingCost?: number },
+  ) => {
+    const response = await api.patch<OrderChangeImpact>(`/orders/${encodeURIComponent(orderCode)}`, data);
+    return response.data;
+  },
+
+  updateItem: async (
+    orderCode: string,
+    itemId: string,
+    data: {
+      quantity?: number;
+      unitPrice?: number;
+      unitDiscountPrice?: number | null;
+      returnToStock?: boolean;
+    },
+  ) => {
+    const response = await api.patch<OrderChangeImpact>(
+      `/orders/${encodeURIComponent(orderCode)}/items/${encodeURIComponent(itemId)}`,
+      data,
+    );
+    return response.data;
+  },
+
+  deleteItem: async (orderCode: string, itemId: string, returnToStock: boolean) => {
+    const response = await api.delete<OrderChangeImpact>(
+      `/orders/${encodeURIComponent(orderCode)}/items/${encodeURIComponent(itemId)}`,
+      { params: { returnToStock } },
+    );
+    return response.data;
+  },
+
+  deleteOrder: async (orderCode: string, returnToStock: boolean) => {
+    const response = await api.delete<OrderChangeImpact>(`/orders/${encodeURIComponent(orderCode)}`, {
+      params: { returnToStock },
+    });
+    return response.data;
   },
 };

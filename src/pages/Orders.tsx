@@ -8,7 +8,9 @@ import {
 import { Loader2 } from 'lucide-react';
 import { SearchInput } from '../components/common/SearchInput';
 import { toEnglishDigits } from '../utils/digits';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { ImpactBanner } from '../components/features/OrderAdminModals';
+import type { OrderChangeImpact } from '../services/order.service';
 import { Tabs } from '../components/common/Tabs';
 import { Select } from '../components/common/Select';
 import { PaymentProviderBadge } from '../components/common/PaymentProviderBadge';
@@ -85,6 +87,11 @@ const paymentStatusBadge = (status?: PaymentTransaction['status']) => {
 };
 
 const Orders = () => {
+  const location = useLocation();
+  // بعد از حذف سفارش از صفحهٔ جزئیات، نتیجه (مبلغ قابل بازپرداخت) اینجا نشان داده می‌شود
+  const [deletedNotice, setDeletedNotice] = useState<{ orderCode: string; impact: OrderChangeImpact } | null>(
+    () => (location.state as { deletedOrder?: { orderCode: string; impact: OrderChangeImpact } } | null)?.deletedOrder ?? null,
+  );
   const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders');
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -264,6 +271,14 @@ const Orders = () => {
 
   return (
     <div className="space-y-6">
+      {deletedNotice && (
+        <div>
+          <div className="text-sm text-gray-600 mb-2">
+            سفارش <span className="font-mono dir-ltr">{deletedNotice.orderCode}</span> حذف شد.
+          </div>
+          <ImpactBanner impact={deletedNotice.impact} onClose={() => setDeletedNotice(null)} />
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#2A2A2A]">مدیریت سفارشات</h1>
         <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm whitespace-nowrap">

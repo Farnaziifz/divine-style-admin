@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin, Truck } from 'lucide-react';
-import { orderService, type OrderComment, type OrderDetails } from '../services/order.service';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin, Truck, Pencil, Trash2 } from 'lucide-react';
+import {
+  orderService,
+  type OrderChangeImpact,
+  type OrderComment,
+  type OrderDetails,
+  type OrderItem,
+} from '../services/order.service';
+import {
+  DeleteItemModal,
+  DeleteOrderModal,
+  EditAmountsModal,
+  EditItemModal,
+  ImpactBanner,
+} from '../components/features/OrderAdminModals';
 import { getImageUrl } from '../utils/image';
 import { Select } from '../components/common/Select';
 import { SnappPayOrderPanel } from '../components/features/SnappPayOrderPanel';
@@ -15,6 +28,16 @@ const canWriteOrders = () => {
       u?.role === 'ADMIN' ||
       (u?.role === 'OPERATOR' && Array.isArray(u.permissions) && u.permissions.includes('ORDERS_WRITE'))
     );
+  } catch {
+    return false;
+  }
+};
+
+const isAdminRole = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    const u = raw ? (JSON.parse(raw) as { role?: string }) : null;
+    return u?.role === 'ADMIN';
   } catch {
     return false;
   }
@@ -56,6 +79,12 @@ const formatPrice = (value?: number) => {
 
 const OrderDetail = () => {
   const { orderCode } = useParams<{ orderCode: string }>();
+  const navigate = useNavigate();
+  const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<OrderItem | null>(null);
+  const [editAmountsOpen, setEditAmountsOpen] = useState(false);
+  const [deleteOrderOpen, setDeleteOrderOpen] = useState(false);
+  const [impact, setImpact] = useState<OrderChangeImpact | null>(null);
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrderStatus, setSelectedOrderStatus] = useState<
@@ -267,8 +296,54 @@ const OrderDetail = () => {
     { value: 'CANCELED', label: 'لغو شده' },
   ];
 
+  // ویرایش آیتم/مبالغ فقط برای سفارش پرداخت‌شده؛ سفارش در انتظار پرداخت هنوز دست درگاه است
+  const canEditItems = canWriteOrders() && order.paymentStatus === 'PAID';
+  const afterChange = (result: OrderChangeImpact) => {
+    setImpact(result);
+    setEditingItem(null);
+    setDeletingItem(null);
+    setEditAmountsOpen(false);
+    setReloadKey((k) => k + 1);
+  };
+
   return (
     <div className="space-y-6">
+      <EditItemModal
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onDone={afterChange}
+        order={order}
+        item={editingItem}
+        run={(data) => orderService.updateItem(order.orderCode, editingItem!.id, data)}
+      />
+      <DeleteItemModal
+        isOpen={!!deletingItem}
+        onClose={() => setDeletingItem(null)}
+        onDone={afterChange}
+        order={order}
+        item={deletingItem}
+        run={(returnToStock) => orderService.deleteItem(order.orderCode, deletingItem!.id, returnToStock)}
+      />
+      {editAmountsOpen && (
+        <EditAmountsModal
+          isOpen
+          onClose={() => setEditAmountsOpen(false)}
+          onDone={afterChange}
+          order={order}
+          run={(data) => orderService.updateOrder(order.orderCode, data)}
+        />
+      )}
+      <DeleteOrderModal
+        isOpen={deleteOrderOpen}
+        onClose={() => setDeleteOrderOpen(false)}
+        onDone={(result) => {
+          setDeleteOrderOpen(false);
+          // سفارش حذف شده دیگر قابل نمایش نیست؛ نتیجهٔ بازپرداخت را به لیست می‌بریم
+          navigate('/orders', { state: { deletedOrder: { orderCode: order.orderCode, impact: result } } });
+        }}
+        order={order}
+        run={(returnToStock) => orderService.deleteOrder(order.orderCode, returnToStock)}
+      />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-zafting-accent/10 text-zafting-accent flex items-center justify-center">
@@ -282,14 +357,27 @@ const OrderDetail = () => {
             </div>
           </div>
         </div>
-        <Link
-          to="/orders"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700"
-        >
-          <ArrowRight size={16} />
-          بازگشت
-        </Link>
+        <div className="flex items-center gap-2">
+          {isAdminRole() && order.paymentStatus !== 'PENDING' && (
+            <button
+              onClick={() => setDeleteOrderOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 size={16} />
+              حذف سفارش
+            </button>
+          )}
+          <Link
+            to="/orders"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700"
+          >
+            <ArrowRight size={16} />
+            بازگشت
+          </Link>
+        </div>
       </div>
+
+      {impact && <ImpactBanner impact={impact} onClose={() => setImpact(null)} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -445,8 +533,45 @@ const OrderDetail = () => {
                   <div className="shrink-0 text-end">
                     <div className="text-sm text-gray-500">قیمت واحد</div>
                     <div className="text-sm font-bold text-gray-800">
-                      {formatPrice(it.unitDiscountPrice ?? it.unitPrice)}
+                      {it.unitDiscountPrice != null && it.unitDiscountPrice < it.unitPrice ? (
+                        <>
+                          <span className="block text-xs font-normal text-gray-400 line-through">
+                            {formatPrice(it.unitPrice)}
+                          </span>
+                          {formatPrice(it.unitDiscountPrice)}
+                        </>
+                      ) : (
+                        formatPrice(it.unitPrice)
+                      )}
                     </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      جمع: {formatPrice((it.unitDiscountPrice ?? it.unitPrice) * it.quantity)}
+                    </div>
+                    {typeof it.costPrice === 'number' && (
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        بهای تمام‌شده: {formatPrice(it.costPrice * it.quantity)}
+                      </div>
+                    )}
+                    {canEditItems && (
+                      <div className="flex items-center justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => setEditingItem(it)}
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        >
+                          <Pencil size={12} />
+                          ویرایش
+                        </button>
+                        <button
+                          onClick={() => setDeletingItem(it)}
+                          disabled={order.items.length <= 1}
+                          title={order.items.length <= 1 ? 'آخرین آیتم؛ کل سفارش را حذف کنید' : undefined}
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 size={12} />
+                          حذف
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -514,7 +639,29 @@ const OrderDetail = () => {
               <div className="flex justify-between"><span>جمع</span><span>{formatPrice(order.totalAmount)}</span></div>
               <div className="flex justify-between"><span>تخفیف</span><span>{formatPrice(order.discountAmount)}</span></div>
               <div className="flex justify-between"><span>ارسال</span><span>{formatPrice(order.shippingCost)}</span></div>
+              <div className="flex justify-between"><span>بسته‌بندی</span><span>{formatPrice(order.packagingCost)}</span></div>
+              {order.financials && order.financials.walletApplied > 0 && (
+                <div className="flex justify-between"><span>پرداخت از کیف پول</span><span>{formatPrice(order.financials.walletApplied)}</span></div>
+              )}
               <div className="flex justify-between font-bold pt-2 border-t border-gray-100"><span>قابل پرداخت</span><span>{formatPrice(order.payableAmount)}</span></div>
+              {order.financials && order.paymentStatus === 'PAID' && (
+                <div className="pt-3 mt-2 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between"><span>بهای تمام‌شده کالاها</span><span>{formatPrice(order.financials.costOfGoods)}</span></div>
+                  <div className="flex justify-between"><span>هزینه بسته‌بندی (محاسبهٔ سود)</span><span>{formatPrice(order.financials.packagingCostForProfit)}</span></div>
+                  <div className={`flex justify-between font-bold ${order.financials.netProfit < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                    <span>سود خالص</span><span>{formatPrice(order.financials.netProfit)}</span>
+                  </div>
+                </div>
+              )}
+              {canEditItems && (
+                <button
+                  onClick={() => setEditAmountsOpen(true)}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  <Pencil size={14} />
+                  ویرایش مبالغ (تخفیف / ارسال / بسته‌بندی)
+                </button>
+              )}
               {order.discountCode ? (
                 <div className="pt-2 text-xs text-gray-500">کد تخفیف: {order.discountCode}</div>
               ) : null}
