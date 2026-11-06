@@ -22,6 +22,8 @@ export interface Order {
   payableAmount?: number;
   userId: string;
   user?: OrderUser;
+  /** Latest payment attempt (list endpoint returns only the newest one). */
+  payment?: { provider: string; status: string; gatewayStatus?: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +50,8 @@ export interface OrderPayment {
   amount: number;
   authority: string | null;
   refId: string | null;
+  gatewayTransactionId?: string | null;
+  gatewayStatus?: string | null;
   createdAt: string;
   verifiedAt: string | null;
 }
@@ -81,7 +85,13 @@ export interface PaginatedResponse<T> {
 }
 
 export const orderService = {
-  getAll: async (params?: { page?: number; limit?: number; q?: string; userId?: string }) => {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    userId?: string;
+    paymentProvider?: string;
+  }) => {
     const response = await api.get<PaginatedResponse<Order>>('/orders', {
       params,
     });

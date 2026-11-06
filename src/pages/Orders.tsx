@@ -10,6 +10,8 @@ import { SearchInput } from '../components/common/SearchInput';
 import { toEnglishDigits } from '../utils/digits';
 import { Link } from 'react-router-dom';
 import { Tabs } from '../components/common/Tabs';
+import { Select } from '../components/common/Select';
+import { PaymentProviderBadge } from '../components/common/PaymentProviderBadge';
 
 const formatDateTime = (value: string) => {
   const date = new Date(value);
@@ -91,6 +93,7 @@ const Orders = () => {
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [providerFilter, setProviderFilter] = useState('');
 
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -108,6 +111,7 @@ const Orders = () => {
         page,
         limit,
         ...(normalizedQuery ? { q: normalizedQuery } : {}),
+        ...(providerFilter ? { paymentProvider: providerFilter } : {}),
       });
       setOrders(response.data);
       setTotal(response.meta.total);
@@ -116,7 +120,7 @@ const Orders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [limit, normalizedQuery, page]);
+  }, [limit, normalizedQuery, page, providerFilter]);
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -172,6 +176,11 @@ const Orders = () => {
         ),
       },
       {
+        key: 'payment',
+        title: 'روش پرداخت',
+        render: (order) => <PaymentProviderBadge provider={order.payment?.provider} />,
+      },
+      {
         key: 'createdAt',
         title: 'تاریخ ثبت',
         render: (order) => formatDateTime(order.createdAt),
@@ -213,6 +222,11 @@ const Orders = () => {
           ) : (
             <span className="font-mono text-gray-700">—</span>
           ),
+      },
+      {
+        key: 'provider',
+        title: 'درگاه',
+        render: (tx) => <PaymentProviderBadge provider={tx.provider} />,
       },
       {
         key: 'createdAt',
@@ -275,6 +289,22 @@ const Orders = () => {
                         setPage(1);
                       }}
                       placeholder="جستجو بر اساس کد سفارش (مثلاً 123456)"
+                    />
+                  </div>
+                  <div className="w-56">
+                    <Select
+                      placeholder="همهٔ روش‌های پرداخت"
+                      value={providerFilter}
+                      options={[
+                        { label: 'همهٔ روش‌های پرداخت', value: '' },
+                        { label: 'اسنپ‌پی (قسطی)', value: 'SNAPPPAY' },
+                        { label: 'زرین‌پال', value: 'ZARINPAL' },
+                        { label: 'زیبال', value: 'ZIBAL' },
+                      ]}
+                      onChange={(e) => {
+                        setProviderFilter(String(e.target.value));
+                        setPage(1);
+                      }}
                     />
                   </div>
                 </div>

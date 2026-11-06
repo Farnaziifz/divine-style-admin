@@ -12,6 +12,7 @@ import {
   type OrderNotificationPhone,
 } from '../../services/orderNotificationPhone.service';
 import api from '../../services/api';
+import { SnappPaySettingsCard } from '../../components/settings/SnappPaySettingsCard';
 
 const tabs = [
   { key: 'shipping', label: 'تنظیمات ارسال', icon: Truck },
@@ -699,6 +700,8 @@ const SiteSettings = () => {
               </div>
             )}
           </div>
+
+          <SnappPaySettingsCard />
 
           <div className="mt-6 rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-gray-50/70 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">

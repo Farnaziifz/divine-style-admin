@@ -4,6 +4,21 @@ import { Loader2, ArrowRight, ReceiptText, CreditCard, MapPin, Truck } from 'luc
 import { orderService, type OrderComment, type OrderDetails } from '../services/order.service';
 import { getImageUrl } from '../utils/image';
 import { Select } from '../components/common/Select';
+import { SnappPayOrderPanel } from '../components/features/SnappPayOrderPanel';
+import { PaymentProviderBadge } from '../components/common/PaymentProviderBadge';
+
+const canWriteOrders = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    const u = raw ? (JSON.parse(raw) as { role?: string; permissions?: string[] }) : null;
+    return (
+      u?.role === 'ADMIN' ||
+      (u?.role === 'OPERATOR' && Array.isArray(u.permissions) && u.permissions.includes('ORDERS_WRITE'))
+    );
+  } catch {
+    return false;
+  }
+};
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-';
@@ -53,6 +68,7 @@ const OrderDetail = () => {
   const [commentSaving, setCommentSaving] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const addressText = useMemo(() => {
     const a = (order?.shippingAddress ?? null) as Record<string, unknown> | null;
@@ -96,7 +112,7 @@ const OrderDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [orderCode]);
+  }, [orderCode, reloadKey]);
 
   const comments = order?.comments ?? [];
   const commentsByParent = useMemo(() => {
@@ -260,7 +276,10 @@ const OrderDetail = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#2A2A2A]">جزئیات سفارش</h1>
-            <p className="text-sm text-gray-500 font-mono dir-ltr">{order.orderCode}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500 font-mono dir-ltr">{order.orderCode}</p>
+              <PaymentProviderBadge provider={order.payments[0]?.provider} />
+            </div>
           </div>
         </div>
         <Link
@@ -555,6 +574,14 @@ const OrderDetail = () => {
                         {p.authority && p.refId ? ' | ' : null}
                         {p.refId ? `RefId: ${p.refId}` : null}
                       </div>
+                    ) : null}
+                    {p.provider === 'SNAPPPAY' ? (
+                      <SnappPayOrderPanel
+                        payment={p}
+                        items={order.items}
+                        canWrite={canWriteOrders()}
+                        onChanged={() => setReloadKey((k) => k + 1)}
+                      />
                     ) : null}
                   </div>
                 ))}
