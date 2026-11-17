@@ -303,7 +303,7 @@ const Orders = () => {
                         setSearchQuery(value);
                         setPage(1);
                       }}
-                      placeholder="جستجو بر اساس کد سفارش (مثلاً 123456)"
+                      placeholder="جستجو بر اساس کد سفارش یا شناسهٔ تراکنش اسنپ‌پی (transaction_id)"
                     />
                   </div>
                   <div className="w-56">

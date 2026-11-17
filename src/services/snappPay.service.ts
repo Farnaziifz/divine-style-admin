@@ -4,7 +4,6 @@ export type SnappPayMethodType = 'INSTALLMENT' | 'POSTPAID' | 'FINANCING';
 
 export interface SnappPaySettings {
   enabled: boolean;
-  forcedPaymentMethodTypes: SnappPayMethodType[];
   commissionType: number;
 }
 
@@ -75,21 +74,23 @@ export const snappPayService = {
       )
     ).data,
 
-  cancel: async (paymentTransactionId: string) =>
+  cancel: async (paymentTransactionId: string, returnToStock = true) =>
     (
       await api.post(`/payments/snapppay/${paymentTransactionId}/cancel`, {
         confirm: true,
+        returnToStock,
       })
     ).data,
 
   updateOrder: async (
     paymentTransactionId: string,
     items: Array<{ orderItemId: string; quantity: number }>,
+    returnToStock = true,
   ) =>
     (
       await api.post<{ payableAmount: number; reduction: number }>(
         `/payments/snapppay/${paymentTransactionId}/update`,
-        { confirm: true, items },
+        { confirm: true, items, returnToStock },
       )
     ).data,
 };

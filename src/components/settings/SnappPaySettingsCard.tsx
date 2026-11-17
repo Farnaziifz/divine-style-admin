@@ -1,16 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Copy, Loader2, XCircle } from 'lucide-react';
-import {
-  snappPayService,
-  type SnappPayAdminSettings,
-  type SnappPayMethodType,
-} from '../../services/snappPay.service';
-
-const METHOD_LABELS: Record<SnappPayMethodType, string> = {
-  INSTALLMENT: 'اقساطی (INSTALLMENT)',
-  POSTPAID: 'پرداخت آخر ماه (POSTPAID)',
-  FINANCING: 'تأمین مالی (FINANCING)',
-};
+import { snappPayService, type SnappPayAdminSettings } from '../../services/snappPay.service';
 
 const CREDENTIAL_LABELS: Record<string, string> = {
   SNAPPPAY_BASE_URL: 'آدرس سرویس (Base URL)',
@@ -59,7 +49,6 @@ export const SnappPaySettingsCard = () => {
   const [saved, setSaved] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
-  const [methods, setMethods] = useState<SnappPayMethodType[]>([]);
   const [commissionType, setCommissionType] = useState('100');
 
   const [serverIp, setServerIp] = useState<string | null | undefined>(undefined);
@@ -82,7 +71,6 @@ export const SnappPaySettingsCard = () => {
       const res = await snappPayService.getSettings();
       setData(res);
       setEnabled(res.settings.enabled);
-      setMethods(res.settings.forcedPaymentMethodTypes);
       setCommissionType(String(res.settings.commissionType));
     } catch (e) {
       setError(errMessage(e, 'خطا در دریافت تنظیمات اسنپ‌پی'));
@@ -111,7 +99,6 @@ export const SnappPaySettingsCard = () => {
       }
       await snappPayService.updateSettings({
         enabled,
-        forcedPaymentMethodTypes: methods,
         commissionType: commission,
       });
       setSaved(true);
@@ -205,35 +192,6 @@ export const SnappPaySettingsCard = () => {
                 نمایش گزینهٔ اسنپ‌پی در صفحهٔ پرداخت
               </span>
             </label>
-
-            <div>
-              <div className="text-sm font-medium text-gray-800">
-                محدودکردن روش‌های پرداخت (اختیاری)
-              </div>
-              <p className="text-xs text-gray-500 mt-1 leading-6">
-                اگر هیچ‌کدام انتخاب نشود، مشتری همهٔ روش‌های فعال خودش را در صفحهٔ اسنپ‌پی می‌بیند.
-                انتخاب روش‌ها نیازمند فعال‌سازی از سمت تیم اسنپ‌پی است؛ در غیر این صورت اثری
-                نخواهد داشت.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-4">
-                {(Object.keys(METHOD_LABELS) as SnappPayMethodType[]).map((m) => (
-                  <label key={m} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={methods.includes(m)}
-                      disabled={saving}
-                      onChange={(e) =>
-                        setMethods((prev) =>
-                          e.target.checked ? [...prev, m] : prev.filter((x) => x !== m),
-                        )
-                      }
-                    />
-                    {METHOD_LABELS[m]}
-                  </label>
-                ))}
-              </div>
-            </div>
 
             <div>
               <label className="text-sm font-medium text-gray-800" htmlFor="snapp-commission">

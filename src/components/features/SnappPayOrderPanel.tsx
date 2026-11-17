@@ -38,6 +38,7 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
   const [editOpen, setEditOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [confirmEdit, setConfirmEdit] = useState(false);
+  const [returnToStock, setReturnToStock] = useState(true);
 
   const gatewayStatus = payment.gatewayStatus ?? null;
   const canceled = gatewayStatus === 'CANCEL';
@@ -148,6 +149,18 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
         </div>
       ) : null}
 
+      {canWrite && paid && !canceled ? (
+        <label className="flex items-center gap-2 text-xs text-gray-700">
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5"
+            checked={returnToStock}
+            onChange={(e) => setReturnToStock(e.target.checked)}
+          />
+          موجودی انبار هنگام لغو / کاهش اقلام برگردانده شود
+        </label>
+      ) : null}
+
       {message ? (
         <div className={`text-xs ${message.ok ? 'text-green-700' : 'text-red-600'}`}>
           {message.text}
@@ -159,12 +172,14 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
         onClose={() => setConfirmCancel(false)}
         isLoading={busy === 'cancel'}
         title="لغو خرید اسنپ‌پی"
-        message="این کار برگشت‌ناپذیر است: خرید در اسنپ‌پی لغو و مبلغ به مشتری برگردانده می‌شود و سفارش «لغو شده» می‌شود. موجودی انبار به‌صورت خودکار برنمی‌گردد. ادامه می‌دهید؟"
+        message="این کار برگشت‌ناپذیر است: خرید در اسنپ‌پی لغو و مبلغ به مشتری برگردانده می‌شود و سفارش «لغو شده» می‌شود. اگر گزینهٔ «برگرداندن موجودی» تیک خورده باشد، اقلام به انبار برمی‌گردند. ادامه می‌دهید؟"
         confirmText="بله، لغو شود"
         onConfirm={async () => {
           await run('cancel', async () => {
-            await snappPayService.cancel(payment.id);
-            return 'خرید در اسنپ‌پی لغو شد';
+            await snappPayService.cancel(payment.id, returnToStock);
+            return returnToStock
+              ? 'خرید در اسنپ‌پی لغو شد و موجودی به انبار برگشت'
+              : 'خرید در اسنپ‌پی لغو شد (موجودی تغییر نکرد)';
           });
           setConfirmCancel(false);
         }}
@@ -174,7 +189,7 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
         <div className="space-y-4">
           <p className="text-sm text-gray-600 leading-7">
             تعداد جدید هر آیتم را وارد کنید (۰ یعنی حذف آیتم). مبلغ جدید باید کمتر از مبلغ فعلی
-            باشد. این عمل برگشت‌ناپذیر است و موجودی انبار به‌صورت خودکار برنمی‌گردد.
+            باشد. این عمل برگشت‌ناپذیر است. موجودی انبار طبق گزینهٔ زیر برمی‌گردد.
           </p>
           <div className="space-y-2">
             {items.map((i) => (
@@ -200,6 +215,15 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
               </div>
             ))}
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={returnToStock}
+              onChange={(e) => setReturnToStock(e.target.checked)}
+            />
+            برگرداندن تعداد کم‌شده به موجودی انبار
+          </label>
           {allRemoved ? (
             <p className="text-xs text-red-600">
               برای حذف همهٔ آیتم‌ها از «لغو خرید و بازگشت وجه» استفاده کنید.
@@ -238,6 +262,7 @@ export const SnappPayOrderPanel = ({ payment, items, canWrite, onChanged }: Prop
             const r = await snappPayService.updateOrder(
               payment.id,
               changedItems.map((i) => ({ orderItemId: i.id, quantity: quantities[i.id] ?? i.quantity })),
+              returnToStock,
             );
             setEditOpen(false);
             return `مبلغ جدید ثبت شد: ${new Intl.NumberFormat('fa-IR').format(Math.round(r.payableAmount))} تومان`;
