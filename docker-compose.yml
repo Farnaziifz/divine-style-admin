@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        NODE_IMAGE: ${NODE_IMAGE:-docker.arvancloud.ir/node:20-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-docker.arvancloud.ir/nginx:1.27-alpine}
         VITE_API_URL: https://api.d-style.ir
         VITE_EVENT_LANDING_BASE_URL: https://landing.d-style.ir
     ports:
